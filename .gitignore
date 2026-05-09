@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# JetBrains IDEs
+.idea/
+*.iml
+
+# Obsidian — keep config, ignore per-machine UI state
+.obsidian/workspace*.json
+.obsidian/cache
+
+# Java build artifacts (for future LeetCode solutions)
+*.class
+target/
+out/

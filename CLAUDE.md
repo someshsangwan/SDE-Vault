@@ -36,7 +36,7 @@ Open to all FAANG+. Most realistic given profile: **Amazon, Microsoft, Google L4
 ```
 SDE-Vault/
 ├── 01_DSA/
-│   └── <Pattern>/                ← e.g. Two-Pointer/, Sliding-Window/
+│   └── NN_<Pattern>/             ← e.g. 01_Two-Pointer/, 02_Sliding-Window/
 │       ├── 01_Notes.md           ← Pattern fundamentals
 │       └── LeetCode/             ← Java solutions (one .java per problem)
 ├── 02_Computer-Network/

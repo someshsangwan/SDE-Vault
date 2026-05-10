@@ -1,74 +1,33 @@
 # CLAUDE.md — SDE-Vault Context
 
-> This file gives Claude full context about who I am, my goals, and how we work together.
-> Claude Code automatically reads this when working in this folder.
+> Context for Claude Code when working in this folder. Auto-loaded.
 
 ---
 
 ## 👤 About Me
 
 - **Name:** Somesh
-- **From:** India, currently working in Japan 🇯🇵
+- **From:** India, currently working in Japan
 - **Current Role:** Backend Software Engineer at **Rakuten Pay**
 - **Tech Stack:** Java, Spring Boot
 - **Experience:** 2 years
-- **Goal:** Crack **FAANG SDE2** in the next 3 months
+- **Goal:** Crack **FAANG SDE2**
 
 ---
 
-## 🎯 Prep Plan (Started: May 9, 2026 → Target: August 8, 2026)
+## 🎯 Prep Approach
 
-### Time Commitment
-- **Weekdays:** 1-2 hours after work
-- **Weekends:** 4-5 hours per day
+- **Topic-driven, not date-driven.** I work on a topic when I have time — no fixed daily schedule, no "Day N" tracking.
+- **Depth over cadence.** Each topic note must be a fundamental I can return to months later (not a summary).
+- **Java-first.** All LeetCode solutions in Java. OS/CN/SD examples grounded in Java/JVM/Spring Boot context where possible.
 
-### Current Skill Levels
-- ✅ **Decent** at DSA
-- ⚠️ **Weak** at System Design
-- 📚 Want to **learn** Operating Systems & Computer Networks
+### Skill Levels
+- ✅ Decent at DSA
+- ⚠️ Weak at System Design
+- 📚 Want to learn Operating Systems & Computer Networks from scratch
 
 ### Target Companies
-- Open to all FAANG+ (Amazon, Microsoft, Google, Meta, Apple, Netflix, etc.)
-- Most realistic given profile: **Amazon, Microsoft, Google L4**
-
----
-
-## 📅 3-Month Roadmap
-
-### Month 1 (May 9 – Jun 8): Foundations
-- **Weeks 1-2:** Arrays, Strings, Two Pointers, Sliding Window, HashMaps
-- **Weeks 3-4:** Stacks, Queues, Linked Lists, Trees, BFS/DFS
-- **System Design:** Fundamentals (load balancing, caching, DBs, CAP theorem)
-- **OS:** Process vs Thread, CPU scheduling, Memory management
-- **CN:** OSI/TCP-IP model, TCP vs UDP, HTTP basics
-
-### Month 2 (Jun 9 – Jul 8): Advanced
-- **Weeks 5-6:** Recursion, Backtracking, Heaps, Tries, Graphs
-- **Weeks 7-8:** Dynamic Programming, Greedy, Low-Level Design (LLD)
-- **System Design:** Deep dives (URL shortener, rate limiter, chat app, news feed)
-- **OS:** Concurrency, Deadlocks, Synchronization
-- **CN:** HTTPS/TLS, DNS, CDN, WebSockets, gRPC
-
-### Month 3 (Jul 9 – Aug 8): Polish + Apply
-- **Weeks 9-10:** Hard problems, mock interviews, behavioral STAR stories
-- **Weeks 11-12:** Applications, referrals, final mocks, negotiation prep
-
----
-
-## 🌅 Daily Routine
-
-Every day I message Claude: **"What's for today?"**
-
-Claude responds with:
-1. 📚 **DSA Theory + LeetCode problem(s)** (main focus)
-2. 🖥️ **OS or CN concept of the day** (rotates)
-3. 🏗️ **System Design nugget** (15 min weekday, deep dive on weekends)
-4. ✅ **End-of-day report-back checklist**
-
-I report back with:
-- Did I solve the problem? Time taken?
-- Any concept that confused me?
-- Claude adjusts next day based on progress.
+Open to all FAANG+. Most realistic given profile: **Amazon, Microsoft, Google L4**.
 
 ---
 
@@ -76,64 +35,39 @@ I report back with:
 
 ```
 SDE-Vault/
-├── README.md
-├── CLAUDE.md                       ← This file
-├── 00-Daily-Notes/                 ← Daily study log
-├── 01-Interview-Prep/
-│   ├── DSA/
-│   │   ├── patterns/               ← Pattern theory notes
-│   │   └── solutions/              ← LeetCode Java solutions by week
-│   ├── System-Design/
-│   │   ├── fundamentals/
-│   │   └── case-studies/
-│   ├── LLD/                        ← Low-Level Design
-│   ├── Operating-Systems/
-│   ├── Computer-Networks/
-│   └── Behavioral/                 ← STAR stories from Rakuten Pay
-├── 02-Java-Spring/                 ← Work-related deep dives
-├── 03-Architecture/
-├── 04-Books-Courses/
-├── 05-Projects/
-└── 99-Resources/                   ← Cheat sheets, links
+├── DSA/
+│   └── <Pattern>/                ← e.g. Two-Pointer/, Sliding-Window/
+│       ├── README.md             ← Pattern fundamentals
+│       └── LeetCode/             ← Java solutions (one .java per problem)
+├── System-Design/
+│   ├── HLD/                      ← High-level / distributed system design
+│   └── LLD/                      ← Low-level / OOP design
+├── Operating-System/
+├── Computer-Network/
+└── Behavioral/                   ← STAR stories from Rakuten Pay work
 ```
 
 ---
 
 ## 🛠️ Tooling
 
-- **Note-taking:** Obsidian (this folder is the vault)
+- **Note-taking:** Obsidian (this folder is the vault) + GitHub (public repo after prep is done)
 - **IDE:** VS Code with Claude Code extension
-- **Language for LeetCode:** Java (free LeetCode tier)
-- **Version control:** Git → GitHub (private repo, public after Month 3)
+- **Language:** Java for LeetCode (free tier)
 
 ---
 
 ## 💡 How Claude Should Help Me
 
-1. **Daily prep:** Give structured theory + problems each day per the roadmap above
-2. **Code review:** Review my Java solutions, suggest improvements (time/space complexity, idiomatic Java)
-3. **Concept explanation:** Use real-world analogies (especially payments/Rakuten context where relevant)
-4. **Notes assistance:** Help me write good Markdown notes in Obsidian style
-5. **Track progress:** Reference past solutions, identify weak areas, suggest revisions
-6. **Mock interviews:** Run mock rounds when I ask (Month 3 onwards)
-7. **Honest feedback:** Don't sugarcoat — if my solution is bad, say so and explain why
+1. **Topic notes:** When I ask for a topic, write a comprehensive Java-friendly fundamental note. Include pattern recognition triggers, templates, complexity analysis, common pitfalls, and self-check questions. Not a summary.
+2. **Code review:** Review my Java solutions for time/space complexity, idiomatic Java, edge cases. Be honest.
+3. **Concept explanation:** Use real-world analogies, especially payments / Rakuten Pay context.
+4. **Note assistance:** Markdown, Obsidian-friendly, use `[[wikilinks]]` for backlinks.
+5. **Mock interviews:** Run mock rounds when I ask.
+6. **Honest feedback:** Don't sugarcoat. If a solution is bad, say so and explain why.
 
 ### Tone
 - Friendly but professional
-- Direct and actionable
-- Treat me like a peer engineer, not a beginner
-- No fluff, no excessive emojis in serious technical content
-
----
-
-## 📊 Progress Tracking
-
-Daily progress logged in `00-Daily-Notes/YYYY-MM-DD.md`
-Pattern mastery tracked in `01-Interview-Prep/DSA/patterns/_progress.md`
-
----
-
-## 🚀 Today's Starting Point
-
-- **Day 1:** May 9, 2026 (Saturday)
-- **First topic:** Two Pointers pattern (DSA) + Process vs Thread (OS) + Client-Server model (System Design)
+- Direct, actionable
+- Treat me as a peer engineer, not a beginner
+- No fluff, no excessive emojis in technical content

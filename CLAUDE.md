@@ -44,8 +44,8 @@ SDE-Vault/
 ├── 04_System-Design/
 │   ├── HLD/                      ← High-level / distributed system design
 │   └── LLD/                      ← Low-level / OOP design
-├── 06_Behavioral/                ← STAR stories from Rakuten Pay work
-└── 07_Interview_Experience/      ← Notes from interviews / mock rounds
+├── 05_Behavioral/                ← STAR stories from Rakuten Pay work
+└── 06_Interview_Experience/      ← Notes from interviews / mock rounds
 ```
 
 **File naming:** numbered prefixes (`01_`, `02_`, …) keep folders/files in the order I want them displayed. Inside pattern folders, the main note is named `01_Notes.md`.

@@ -6,12 +6,13 @@ Personal preparation vault for software engineering interviews. Java-focused.
 
 | Folder | Contents |
 |---|---|
-| `DSA/` | Pattern-based DSA notes (one folder per pattern) with Java LeetCode solutions |
-| `System-Design/HLD/` | High-level (distributed system) design notes |
-| `System-Design/LLD/` | Low-level (object-oriented) design notes |
-| `Operating-System/` | OS fundamentals |
-| `Computer-Network/` | Networking fundamentals |
-| `Behavioral/` | STAR-format interview stories |
+| `01_DSA/` | Pattern-based DSA notes (one folder per pattern) with Java LeetCode solutions |
+| `02_Computer-Network/` | Networking fundamentals |
+| `03_Operating-System/` | OS fundamentals |
+| `04_System-Design/HLD/` | High-level (distributed system) design notes |
+| `04_System-Design/LLD/` | Low-level (object-oriented) design notes |
+| `06_Behavioral/` | STAR-format interview stories |
+| `07_Interview_Experience/` | Notes from interviews and mock rounds |
 
 ## Philosophy
 

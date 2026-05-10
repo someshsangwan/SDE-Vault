@@ -10,6 +10,9 @@
 .idea/
 *.iml
 
+# Claude Code per-machine settings
+.claude/
+
 # Obsidian — keep config, ignore per-machine UI state
 .obsidian/workspace*.json
 .obsidian/cache

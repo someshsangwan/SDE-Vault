@@ -35,17 +35,20 @@ Open to all FAANG+. Most realistic given profile: **Amazon, Microsoft, Google L4
 
 ```
 SDE-Vault/
-├── DSA/
+├── 01_DSA/
 │   └── <Pattern>/                ← e.g. Two-Pointer/, Sliding-Window/
-│       ├── README.md             ← Pattern fundamentals
+│       ├── 01_Notes.md           ← Pattern fundamentals
 │       └── LeetCode/             ← Java solutions (one .java per problem)
-├── System-Design/
+├── 02_Computer-Network/
+├── 03_Operating-System/
+├── 04_System-Design/
 │   ├── HLD/                      ← High-level / distributed system design
 │   └── LLD/                      ← Low-level / OOP design
-├── Operating-System/
-├── Computer-Network/
-└── Behavioral/                   ← STAR stories from Rakuten Pay work
+├── 06_Behavioral/                ← STAR stories from Rakuten Pay work
+└── 07_Interview_Experience/      ← Notes from interviews / mock rounds
 ```
+
+**File naming:** numbered prefixes (`01_`, `02_`, …) keep folders/files in the order I want them displayed. Inside pattern folders, the main note is named `01_Notes.md`.
 
 ---
 

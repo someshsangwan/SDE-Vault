@@ -1,6 +1,11 @@
 # macOS
 .DS_Store
 
+# Books / reference PDFs (copyrighted, do not push to GitHub)
+*.pdf
+*.epub
+*.mobi
+
 # JetBrains IDEs
 .idea/
 *.iml

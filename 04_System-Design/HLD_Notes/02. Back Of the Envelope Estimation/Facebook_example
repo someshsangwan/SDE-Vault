@@ -1,0 +1,205 @@
+Back-of-the-Envelope Estimation: Detailed Notes
+1. Understanding Back-of-the-Envelope Estimation
+
+    When designing a large-scale system, we need to estimate:
+
+        Servers
+
+        Databases
+
+        Caches
+
+        CDN
+
+        Load balancers
+
+    Interviewers often ask:
+
+        How much cache do we need?
+
+        How many servers are required?
+
+    Back-of-the-envelope estimation helps in making rough estimates.
+
+    These are quick, high-level calculations that guide system design decisions.
+
+    Key Considerations:
+
+        Estimates should be simple (use multiples of 10 for quick calculations).
+
+        Do not aim for high accuracy (focus on rough estimations).
+
+        Use known reference values (cheat sheets for traffic, storage, RAM, etc.).
+
+2. Cheat Sheet for Quick Estimations
+Number of Zeros	Traffic / Storage Estimation
+103103 (3 zeros)	Thousands (KB)
+106106 (6 zeros)	Millions (MB)
+109109 (9 zeros)	Billions (GB)
+10121012 (12 zeros)	Trillions (EB - Exabytes)
+10151015 (15 zeros)	Quadrillions (PB - Petabytes)
+
+    Memory Reference Values:
+
+        Character = 2 bytes
+
+        Double = 8 bytes
+
+        Image size ≈ 300KB (average)
+
+3. Key Estimation Factors
+
+    Number of servers
+
+    RAM size
+
+    Storage capacity
+
+    Trade-offs (CAP theorem considerations)
+
+4. Mathematical Approach for Estimations
+Estimating Storage
+
+    Formula:
+    X (users)×Y (data per user)
+    X (users)×Y (data per user)
+
+        Example: 5 million users, each storing 2 KB:
+        5,000,000×2 KB=10 GB
+        5,000,000×2 KB=10 GB
+
+        Breakdown:
+
+            106106 (million users) → 6 zeros
+
+            103103 (KB to MB) → 3 zeros
+
+            Final result: 10 GB
+
+5. Estimating Facebook’s System Design
+User Assumptions
+
+    Total Facebook users = 1 billion (109109).
+
+    Daily Active Users (DAU) = 25% = 250 million.
+
+    User activity per day:
+
+        5 read queries
+
+        2 write queries
+
+        Total = 7 queries per user per day.
+
+Traffic Estimation
+
+    Total daily queries:
+    250,000,000×7=1.75 billion queries/day
+    250,000,000×7=1.75 billion queries/day
+
+    Seconds in a day: 86,400 (approximate to 100,000 for easy calculations).
+
+    Queries per second (QPS):
+    1.75×109105=18,000 queries per second
+    1051.75×109​=18,000 queries per second
+
+    System must handle 18K QPS.
+
+6. Storage Estimation
+Post Data Storage
+
+    Each user posts 2 times per day.
+
+    Each post is 250 characters (~1 KB per user per day).
+
+    Total daily data for posts:
+    250,000,000×1 KB=250 GB/day
+    250,000,000×1 KB=250 GB/day
+
+    Storage for 5 years:
+    2000×250 GB=500 TB
+    2000×250 GB=500 TB
+
+Image Storage
+
+    10% of users upload images daily.
+
+    Each image size ≈ 300 KB.
+
+    Daily image storage:
+    25,000,000×300 KB=7500 GB≈8 TB/day
+    25,000,000×300 KB=7500 GB≈8 TB/day
+
+    Storage for 5 years:
+    2000×8 TB=16 PB
+    2000×8 TB=16 PB
+
+7. RAM Estimation for Caching
+
+    Assumption: Cache last 5 posts per user.
+
+    Post size: 500 bytes.
+
+    Total cache size per user:
+    5×500=2500 bytes=2.5 KB
+    5×500=2500 bytes=2.5 KB
+
+    Total cache for all users:
+    250,000,000×2.5 KB=750 GB
+    250,000,000×2.5 KB=750 GB
+
+    If one machine handles 75 GB cache, then:
+    75075=10 machines required for caching
+    75750​=10 machines required for caching
+
+8. Server Estimation (Handling QPS)
+
+    Latency per request = 500 ms.
+
+    One server handles 50 threads → 100 requests per second.
+
+    Total servers needed to handle 18,000 QPS:
+    18,000100=180 servers
+    10018,000​=180 servers
+
+9. Summary of Resource Requirements
+Resource	Estimated Value
+Queries per second (QPS)	18,000 QPS
+Storage for posts (5 years)	500 TB
+Storage for images (5 years)	16 PB
+RAM required for caching	750 GB
+Cache servers required	10 (each 75 GB)
+Servers needed to handle requests	180 servers
+10. CAP Theorem Considerations
+
+    Consistency (C)
+
+    Availability (A)
+
+    Partition Tolerance (P)
+
+    Trade-offs for Facebook:
+
+        Partition tolerance is essential (data is distributed).
+
+        Availability is critical (users should access data anytime).
+
+        Consistency can be relaxed → Eventual consistency is acceptable.
+
+11. Key Takeaways
+
+    Back-of-the-envelope estimations help in quick system design decisions.
+
+    Estimation categories:
+
+        Traffic (QPS)
+
+        Storage (posts, images, DB).
+
+        RAM (caching needs).
+
+        Servers (latency and request handling).
+
+    Simplify calculations (use multiples of 10).
+
+    CAP theorem helps in designing trade-offs.

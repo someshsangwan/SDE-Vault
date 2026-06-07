@@ -96,3 +96,61 @@ Avoid ambiguity by labeling units (e.g., `5 MB` instead of `5`).
 - **Cache Requirements:** Evaluate memory requirements for caching.
 - **Number of Servers:** Calculate hardware needs based on workload.
 
+---
+
+## Section 4: Example Estimation - Facebook QPS, Storage, Cache, and Servers
+
+### Assumptions
+- **Total Users:** 1 billion (\(10^9\)).
+- **Daily Active Users (DAU):** 25% = 250 million.
+- **User Activity per Day:** 5 read queries + 2 write queries = 7 queries/user/day.
+- **Write frequency:** 2 posts per day.
+- **Post Size:** 250 characters (~1 KB per post).
+- **Image uploads:** 10% of users upload images daily.
+- **Average image size:** ~300 KB.
+- **Data retention:** 5 years.
+
+### Estimations
+
+1. **Queries Per Second (QPS):**
+   - **Daily Queries:** \( 250\text{M users} \times 7\text{ queries/day} = 1.75\text{ billion queries/day} \)
+   - **Seconds per Day:** ~100,000 (approximated from 86,400 for simplicity)
+   - **QPS:** \( \frac{1.75 \times 10^9}{10^5} = 17,500\text{ QPS} \) (approximated to **18,000 QPS**)
+
+2. **Post Data Storage:**
+   - **Daily Post Storage:** \( 250\text{M users} \times 1\text{ KB/day} = 250\text{ GB/day} \)
+   - **5-Year Post Storage:** \( 250\text{ GB/day} \times 365 \times 5 \approx 250\text{ GB} \times 2000 \text{ days} = 500\text{ TB} \)
+
+3. **Image Storage:**
+   - **Daily Image Uploads:** \( 10\% \text{ of DAU} = 25\text{ million images/day} \)
+   - **Daily Image Storage:** \( 25\text{M} \times 300\text{ KB} = 7.5\text{ TB/day} \approx 8\text{ TB/day} \)
+   - **5-Year Image Storage:** \( 8\text{ TB/day} \times 2000 \text{ days} = 16\text{ PB} \)
+
+4. **RAM Cache Requirements:**
+   - **Assumption:** Cache the last 5 posts per user.
+   - **Cache Size per User:** \( 5 \text{ posts} \times 500\text{ bytes} = 2.5\text{ KB} \)
+   - **Total Cache Size:** \( 250\text{M users} \times 2.5\text{ KB} = 625\text{ GB} \) (approximated to **750 GB** for overhead/padding)
+   - **Cache Servers:** If one machine handles 75 GB of cache, we need \( \frac{750\text{ GB}}{75\text{ GB}} = 10\text{ cache servers} \).
+
+5. **Server Requirements (Request Handling):**
+   - **Latency per Request:** 500 ms.
+   - **Single Server Capacity:** 50 threads \(\rightarrow\) 100 requests per second.
+   - **Total Servers Needed:** \( \frac{18,000\text{ QPS}}{100\text{ req/sec}} = 180\text{ servers} \).
+
+### Summary of Resource Requirements
+
+| Resource | Estimated Value |
+|---|---|
+| **Queries per second (QPS)** | 18,000 QPS |
+| **Storage for posts (5 years)** | 500 TB |
+| **Storage for images (5 years)** | 16 PB |
+| **RAM required for caching** | 750 GB |
+| **Cache servers required** | 10 (each 75 GB) |
+| **Servers needed to handle requests** | 180 servers |
+
+### CAP Theorem Considerations for Facebook
+- **Partition Tolerance (P):** Essential, as data is distributed across global datacenters.
+- **Availability (A):** Critical, users must be able to view their feeds anytime.
+- **Consistency (C):** Can be relaxed in favor of availability. Eventual consistency is perfectly acceptable (e.g., a friend's post doesn't need to appear instantly on every feed).
+
+

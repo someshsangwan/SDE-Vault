@@ -1,163 +1,211 @@
-# Part 5: Microservices Data Management & The Saga Pattern
+# Part 5: Monolith vs. Microservices & Decomposition Patterns
 
-In a monolith, data consistency is simple because there is only one database. In a microservices architecture, managing data across multiple independent databases is one of the most challenging problems. 
-
-This note explains the shift from monolith to microservices data design, why shared databases fail, and how the **Saga Pattern** solves the distributed transaction problem.
+This is the most important set of patterns in microservices. According to Concept & Coding, around **50 interview questions** in HLD rounds come from this topic alone. Let's cover it all.
 
 ---
 
-## 1. Recapping Monolith vs. Microservices
+## 1. Monolithic Architecture (Legacy Applications)
 
-Before diving into databases, let's understand the trade-offs that drive this transition:
+A **monolith** is a single deployable unit where all business functionality lives together in one codebase.
 
-### Monolithic Architecture (Legacy/Single Unit)
-All business modules (Order, Payment, Inventory) run in a single application and share **one database**.
-* **Disadvantages:**
-  1. **Overloaded IDE:** The code footprint is massive (often GBs), making local development tools slow.
-  2. **Expensive Scaling:** If only the *Order* feature has high traffic, you must clone the entire monolithic application on new servers, wasting memory and CPU on other modules.
-  3. **Slow Deployments:** A single-line bug fix requires running the entire regression test suite and redeploying the entire codebase.
-  4. **Tight Coupling:** Code modules easily cross-call each other, leading to spaghetti dependencies.
+For example, an online store monolith has everything inside one application:
+* Order management
+* Product/Inventory management
+* Account & Login management
+* Billing & Payment
 
-### Microservices Architecture
-The monolith is split into small, autonomous, loosely coupled services.
-* **Advantages:** Independent scaling, faster deployments, isolated debugging.
-* **Disadvantages:** Network latency, monitoring complexity, and **data consistency**.
+```
+         [ Single Monolithic Application ]
+  ┌─────────────────────────────────────────────┐
+  │  Order Module   │  Payment Module           │
+  │─────────────────│───────────────────────────│
+  │  Product Module │  Account Module           │
+  └────────────────────────────┬────────────────┘
+                               │
+                               ▼
+                      [ Single Database ]
+```
+
+### Disadvantages of Monolithic Architecture
+
+#### 1. Overloaded IDE
+Because all modules are in one codebase, the application can grow to **GBs in size**. Even opening the project in an IDE (like IntelliJ or Eclipse) becomes extremely slow. Developers waste time just loading the project.
+
+#### 2. Scaling is Very Hard (and Expensive)
+Suppose your *Order* module gets a spike of heavy traffic. You want to scale just that part.
+
+In a monolith — **you cannot**. You have to spin up an **entire new copy** of the whole application (all GBs of it) just to handle extra Order traffic.
+
+This means you are paying for and running extra copies of Payment, Product, Login etc. even though they don't need scaling. It is **not cost-efficient**.
+
+#### 3. Very Tight Coupling (Deployment is a Nightmare)
+All modules in a monolith share the same codebase. So:
+* Fixing **one bug in one line** requires running the **entire regression test suite** for the whole application.
+* Then you deploy the **entire application** again — even if only 1 line changed.
+* A change in the Order module might accidentally break the Payment module because they share common code.
+
+This is called being **Tightly Coupled**. Any change anywhere has the potential to break everything.
+
+#### 4. Transaction Management is Hard
+With a single shared database, managing transactions (ACID properties) is straightforward:
+```
+START TRANSACTION → Do operations in DB → COMMIT or ROLLBACK
+```
+But when the business grows and we need to split the system, transaction management becomes complex (more on this in Part 6).
 
 ---
 
-## 2. Database-per-Service: Why Share is a Bad Idea
+## 2. Why Microservices? (All Disadvantages of Monolith Become Advantages)
 
-In a microservices design, each service must have its **own dedicated database** (Database-per-Service pattern). 
+In a **microservices architecture**, we break the single monolith into small, independent services. Each service:
+* Focuses on **one business capability** only
+* Has its **own codebase** and **own database**
+* Can be **deployed independently**
+* Can be **scaled independently**
 
 ```
-   [ Shared Database (Monolith) ]                [ Database-per-Service (Microservices) ]
-       ┌─────────────────────┐                         ┌─────────────┐   ┌─────────────┐
-       │   Single Database   │                         │  Order DB   │   │ Payment DB  │
-       └─────▲─────────▲─────┘                         └──────▲──────┘   └──────▲──────┘
-             │         │                                      │                 │
-       ┌─────┴───┐ ┌───┴─────┐                         ┌──────┴──────┐   ┌──────┴──────┐
-       │  Order  │ │ Payment │                         │Order Service│   │Payment Serv.│
-       │ Service │ │ Service │                         └─────────────┘   └─────────────┘
-       └─────────┘ └─────────┘
+  [ Order     ]  [ Payment   ]  [ Product   ]  [ Account  ]
+  [ Service   ]  [ Service   ]  [ Service   ]  [ Service  ]
+      │               │               │               │
+  [ Order DB  ]  [Payment DB ]  [Product DB ]  [Account DB]
 ```
 
-### Why we do NOT use a Shared Database in Microservices:
-1. **Tight Coupling at Schema Level:** If *Order Service* updates a table schema, it can silently break the *Payment Service* that reads from the same table.
-2. **Resource Lockups:** If *Order Service* locks a table for a heavy database operation, it blocks the *Payment Service* from functioning, defeating the purpose of independent services.
-3. **Database Fit:** Different services need different types of databases. A *Catalog Service* might prefer a NoSQL document store (MongoDB), while a *Financial Ledger Service* requires a relational SQL database (PostgreSQL).
+### Advantages of Microservices
+| Monolith (Disadvantage) | Microservices (Advantage) |
+| :--- | :--- |
+| Entire app redeployed for any change | Deploy only the changed service |
+| Entire app scaled even for one module | Scale only the service that needs it (cost-efficient) |
+| One bug can break everything | Bug in Order Service does not affect Payment Service |
+| Overloaded IDE with massive codebase | Small, fast, focused codebases |
+| One technology stack for everything | Each service can use the best DB/language for its job |
+
+### Disadvantages of Microservices (Important for Interviews!)
+
+#### 1. Need for Proper Decomposition
+Breaking a monolith into microservices must be done carefully. If services are **not loosely coupled**, you lose all the benefits.
+* **Example of bad design:** If changing Service A requires changing Service B and Service C too, you have just created a **distributed monolith** — the worst of both worlds.
+* **Loosely coupled** means: You can change, deploy, and scale one service without affecting any other.
+
+#### 2. Debugging & Monitoring is Complex
+In a monolith, there is one log file. In microservices, a single user request might travel through Service 1 → Service 2 → Service 3.
+
+If Service 3 crashes:
+* Team 1 sees Service 1 is reporting a failure → blames Service 2.
+* Team 2 investigates → blames Service 3.
+* Team 3 fixes the actual bug.
+
+Just **finding where the error happened** across service boundaries becomes complex. This is why tools like **Distributed Tracing (Jaeger, Zipkin)** are critical.
+
+#### 3. Transaction Management is Hard (Key Challenge)
+Each service has its own database. You cannot run a single SQL transaction across multiple databases. This is the biggest technical challenge in microservices (solved by the **Saga Pattern** in Part 6).
 
 ---
 
-## 3. The Distributed Transaction Problem
+## 3. The Phases of Microservices Design
 
-In a monolith with a SQL database, creating an order is simple:
-```sql
-START TRANSACTION;
-UPDATE Inventory SET quantity = quantity - 1 WHERE item_id = 101;
-INSERT INTO Orders (id, status) VALUES (1, 'PENDING');
-INSERT INTO Payments (order_id, amount) VALUES (1, 100);
-COMMIT; -- If any line fails, everything automatically rolls back (ACID)
+Building a microservices system involves solving problems in distinct phases. Each phase has established design patterns to guide you:
+
 ```
-
-In microservices:
-1. **Order Service** updates its local *Order DB*.
-2. **Inventory Service** updates its local *Inventory DB*.
-3. **Payment Service** updates its local *Payment DB*.
-
-Because they are separate databases, **you cannot run a single SQL transaction across them.** If the *Payment Service* fails at the end, how do we roll back the changes that were already saved in the *Order DB* and *Inventory DB*?
+  ┌──────────────────────────────────────────────────────────────────┐
+  │                 Phases of Microservices Design                   │
+  ├──────────────────┬───────────────┬──────────────────┬───────────┤
+  │  DECOMPOSITION   │   DATABASE    │  COMMUNICATION   │INTEGRATION│
+  │                  │               │                  │           │
+  │ How do we break  │ Should each   │ How do services  │ How do we │
+  │ the monolith     │ service have  │ talk to each     │ expose    │
+  │ into services?   │ its own DB?   │ other?           │ services? │
+  │                  │               │                  │           │
+  │ • By Business    │ • DB per      │ • REST/gRPC      │• API      │
+  │   Capability     │   Service     │   (Sync)         │  Gateway  │
+  │ • By Sub-domain  │ • Shared DB   │ • Message Broker │• BFF      │
+  │   (DDD)          │   (avoid!)    │   (Async/Kafka)  │           │
+  └──────────────────┴───────────────┴──────────────────┴───────────┘
+                                         + OBSERVABILITY (Logging, Tracing, Metrics)
+```
 
 ---
 
-## 4. The Solution: The Saga Pattern
+## 4. Decomposition Patterns: How to Break the Monolith?
 
-A **Saga** is a sequence of local transactions. Instead of locking all databases at once, a Saga executes local transactions sequentially across services.
+**Decomposition** answers the question: *"How small should a microservice be?"*
 
-### Compensating Transactions (The "Rollback" Action)
-If a step in the Saga fails, the system must undo the previous successful steps. Because we cannot execute a traditional database rollback, we run **Compensating Transactions** in reverse order to cancel out the changes.
+There is **no fixed size** for a microservice. For one company, an Order Management service (with 10 features) might be a "micro" service. For another, each of those 10 features might need its own service. It entirely depends on your scale and team structure.
 
-#### Example: Buying a Product
-* **Normal Flow:**
-  1. *Order Service* creates an order (`PENDING`).
-  2. *Payment Service* charges the credit card.
-  3. *Inventory Service* reserves the item.
-  4. *Order Service* updates order status to `COMPLETED`.
-* **Failure Flow (Payment Fails):**
-  1. *Order Service* creates an order (`PENDING`).
-  2. *Payment Service* tries to charge card and **fails**.
-  3. **Compensating Transaction Triggered:** *Order Service* runs a local transaction to change the order status to `CANCELLED` (or deletes it).
+Two patterns guide this decision:
 
 ---
 
-## 5. Saga Architectures: Choreography vs. Orchestration
+### Pattern 1: Decompose by Business Capability
 
-There are two primary ways to design a Saga: **Choreography** (Event-Driven) and **Orchestration** (Central Manager).
+Break the system based on **what business function the code performs**.
 
-### Pattern A: Choreography (Event-Driven / Decentralized)
-There is no central coordinator. Services listen to events and perform their tasks independently.
+An online store can be decomposed like this:
+
+| Business Capability | Microservice Created |
+| :--- | :--- |
+| Managing orders (create, track, cancel) | *Order Service* |
+| Managing products and stock levels | *Product/Inventory Service* |
+| Managing user accounts and authentication | *Account Service* |
+| Managing login sessions | *Auth/Login Service* |
+| Generating bills and receipts | *Billing Service* |
+| Processing credit card and UPI payments | *Payment Service* |
 
 ```
-  [Order Service] ─── (Order Created Event) ───► [Payment Service]
-         ▲                                              │
-         │                                     (Payment Done Event)
-         │                                              ▼
-  [Order Complete] ◄── (Inventory Reserved Event) ── [Inventory Service]
+         Before (Monolith)              After (Business Capability)
+     ┌──────────────────────┐         ┌────────┐ ┌─────────┐ ┌────────┐
+     │ Order + Product +    │  ────►  │ Order  │ │ Product │ │Account │
+     │ Account + Billing +  │         │ Svc    │ │ Svc     │ │ Svc    │
+     │ Payment in one app   │         └────────┘ └─────────┘ └────────┘
+     └──────────────────────┘         ┌─────────┐ ┌─────────┐
+                                      │ Billing │ │Payment  │
+                                      │ Svc     │ │ Svc     │
+                                      └─────────┘ └─────────┘
 ```
 
-* **How it works:**
-  1. *Order Service* creates a pending order and publishes an `Order Created` event.
-  2. *Payment Service* listens to this event, charges the user, and publishes a `Payment Done` event.
-  3. *Inventory Service* listens to `Payment Done`, updates stock, and publishes an `Inventory Reserved` event.
-  4. *Order Service* listens to `Inventory Reserved` and completes the order.
-* **Pros:** 
-  * Highly decoupled (services only watch events).
-  * Easy to build for simple workflows (2 to 3 services).
-* **Cons:**
-  * Hard to track the overall status of a transaction (no single place to see what is happening).
-  * Risk of **cyclical dependencies** (Service A triggers B, which triggers C, which accidentally triggers A again).
+**Challenge:** You need a **good, deep understanding of your business** to correctly identify business capabilities. If business boundaries are unclear or overlap, services will end up tightly coupled again.
 
 ---
 
-### Pattern B: Orchestration (Central Coordinator)
-A dedicated coordinator service (the **Orchestrator**) tells each participant service what to do.
+### Pattern 2: Decompose by Sub-domain (Domain-Driven Design - DDD)
+
+This pattern comes from **Domain-Driven Design (DDD)** by Eric Evans. Instead of thinking about code functions, we think about **business domains** and their boundaries.
+
+Key DDD concepts:
+* **Domain:** The overall business problem you are solving (e.g., "e-commerce").
+* **Sub-domain:** A specific area within the domain (e.g., "Order Management", "Customer Support").
+* **Bounded Context:** A clear boundary within which a specific model (set of terms, entities, rules) applies and makes sense.
+
+Think of it this way: The word **"Customer"** in an *Order Service* means a person placing an order (with address, items, history). In a *Support Service*, it means a person who needs help (with tickets, issues, chat history). **Same word, different meaning** — these are different Bounded Contexts.
 
 ```
-                      ┌─── 1. Charge Card? ───► [Payment Service]
-                      │◄── 2. Payment OK ──────┘
-  [Order Service] ──► │
-   (Orchestrator)     ├─── 3. Reserve Stock? ─► [Inventory Service]
-                      │◄── 4. Stock Reserved ──┘
-                      ▼
-               Complete Order
+  ┌─────────────────────────┐      ┌──────────────────────────┐
+  │  Order Bounded Context  │      │  Support Bounded Context  │
+  │                         │      │                          │
+  │ Customer = {            │      │ Customer = {             │
+  │   name, address,        │      │   name, tickets,         │
+  │   orderHistory          │      │   openIssues             │
+  │ }                       │      │ }                        │
+  └─────────────────────────┘      └──────────────────────────┘
 ```
 
-* **How it works:**
-  1. *Order Service* acts as the Orchestrator. It creates the order.
-  2. The Orchestrator calls *Payment Service* to charge the card.
-  3. Once Payment replies `Success`, the Orchestrator calls *Inventory Service* to reserve the item.
-  4. If inventory fails, the Orchestrator sends a message to *Payment Service* saying: *"Please refund the money"* (Compensating Transaction).
-* **Pros:**
-  * **No Cyclical Dependencies:** The workflow is strictly controlled in one place.
-  * **Easier to Debug:** You can look at the Orchestrator's database to see the exact state of any pending transaction.
-  * **Great for Complex Workflows:** Easy to add new steps without modifying other services.
-* **Cons:**
-  * **Single Point of Failure (SPOF):** If the Orchestrator crashes mid-transaction, you must write logic to recover its state upon restart.
-  * **Tighter Coupling:** The Orchestrator must know the API of all participant services.
+DDD gives us a systematic, business-aligned way to draw service boundaries so services remain naturally loosely coupled.
 
 ---
 
-## 6. Key Interview Questions & Answers
+## 5. Putting It All Together: Interview Summary
 
-### Q1: What happens if a Compensating (Rollback) Transaction fails?
-* **Answer:** This is a major edge case. If a compensating transaction fails (e.g., trying to refund a user but the bank API is down), the system is left in an **inconsistent state**.
-* **How to fix it:**
-  1. **Automatic Retries:** The Orchestrator (or event consumer) must retry the compensating transaction with exponential backoff.
-  2. **Dead Letter Queue (DLQ) & Alerting:** If retries fail repeatedly, the message is placed in a DLQ, and an alert is sent for **manual intervention** (support team fixes it manually).
+### Q1: What is the difference between Monolith and Microservices?
+* **Monolith:** One large application, one DB, all features tightly coupled, harder to scale.
+* **Microservices:** Split into small independent services, each with its own DB, independently deployable and scalable.
 
-### Q2: Is Saga a 2-Phase Commit (2PC)?
-* **Answer:** No. 
-  * **2-Phase Commit (2PC)** is a synchronous protocol that locks databases until all participants agree to commit. It provides strict consistency but is slow and blocks database resources (leads to performance bottlenecks).
-  * **Saga** is asynchronous. It does not lock database rows across services, meaning data is **eventually consistent**. If a step fails, it corrects it later via compensation. It is much more scalable.
+### Q2: What are the disadvantages of Microservices?
+1. Services must be **properly decomposed** (otherwise you get a distributed monolith with high latency).
+2. **Debugging is complex** (errors span multiple services and logs).
+3. **Transaction management is hard** (no ACID across multiple databases — solved by Saga Pattern).
 
-### Q3: How do we handle read requests while a Saga is running? (Lack of Isolation)
-* **Answer:** Sagas lack isolation (other users can see data changes *before* the Saga fully completes). E.g., a user might see an item is reserved, but the transaction fails 5 seconds later and becomes unreserved.
-* **How to handle it:** Use the **Semantic Lock** pattern. When a transaction starts, set a status field (e.g., `Order Status = PENDING_PAYMENT`). Clients reading this data know it is not finalized yet and can treat it accordingly in the UI.
+### Q3: What are the two main decomposition patterns?
+1. **Business Capability:** Divide services by *what business function* they perform.
+2. **Sub-domain / DDD:** Divide services by *bounded business contexts*, giving each its own clear vocabulary and rules.
+
+### Q4: What is Loose Coupling and why does it matter in Microservices?
+**Loose Coupling** means you can change, deploy, or scale one service without impacting any other service. This is the primary goal of microservices. If your services are **tightly coupled**, you have not truly decomposed your system — you just have a distributed monolith.

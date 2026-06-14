@@ -35,6 +35,7 @@ Check the notes here: https://pagefy.io/system-design/system-design-interview-by
  * [Chapter 26 - Payment System](./26.%20Payment%20System/)
  * [Chapter 27 - Digital Wallet](./27.%20%20Digital%20Wallet/)
  * [Chapter 28 - Stock Exchange](./28.%20Stock%20Exchange/)
+ * [Chapter 29 - Microservices](./29_Micro_services/)
 
 
 # Additonal Resources

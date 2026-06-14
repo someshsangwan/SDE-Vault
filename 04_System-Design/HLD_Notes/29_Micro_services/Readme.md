@@ -8,6 +8,7 @@ A microservices architecture is a design pattern in which a single application i
 * **[Part 1: API Gateway and Microservices Architecture](./01_API_Gateway_and_Microservices_Architecture.md)**
 * **[Part 2: Service Mesh and its Architecture | How Microservices Communicate?](./02_Service_Mesh_and_its_Architecture.md)**
 * **[Part 3: Service Discovery in Microservices](./03_Service_Discovery.md)**
+* **[Part 4: Synchronous vs. Asynchronous Communication](./04_Sync_vs_Async_Communication.md)**
 * *(More parts to be added later)*
 
 ---

@@ -112,3 +112,20 @@ To prevent sending traffic to dead instances, registries use:
 * **Consul:** A highly consistent, CP (Consistency/Partition tolerance) registry by HashiCorp. Also serves as a configuration manager and service mesh.
 * **ZooKeeper:** A highly consistent distributed key-value store, historically used by Apache projects for registry needs.
 * **Kubernetes (K8s) DNS:** In containerized environments, Kubernetes handles this automatically. Every time you create a service, K8s updates its internal DNS so you can simply call `http://payment-service`.
+
+---
+
+## 6. How Service Discovery and Service Mesh Work Together
+
+A common question is: *"If I have a Service Mesh, do I still need Service Discovery?"* 
+
+Yes! **Service Discovery is built inside the Service Mesh.**
+
+Using our **CEO and Assistant** analogy:
+* **Service Discovery** is the central **Phonebook** at the main office.
+* **Service Mesh** is the network of **Personal Assistants (Sidecar Proxies)**.
+  1. The **Control Plane (The Manager)** reads the Service Discovery phonebook.
+  2. The Control Plane copies the lists and hands them to the **Sidecar Proxies (The Assistants)**.
+  3. When a service wants to send a call, its **Sidecar Proxy** uses its local copy of the registry list to route the request directly to an active instance.
+
+In short: **Service Discovery is the dictionary, and Service Mesh is the system that reads it to deliver messages.**

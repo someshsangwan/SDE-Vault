@@ -86,7 +86,136 @@ chown -R www-data:www-data /app  # Change ownership recursively (common for web 
 
 ---
 
-### 3. Process Management & Job Control
+### 3. Host System Information & Identity Utilities
+
+When logging into an unfamiliar machine or starting a shell session, it is critical to query host information (operating system metadata, runtime duration, loaded user profiles, and shell environment parameters).
+
+#### A. Querying System Metadata (`uname`)
+
+🧠 **What is uname?**
+
+👉 `uname` (Unix Name) prints detailed metadata about the current operating system, machine architecture, and kernel version.
+
+🎯 **Basic Syntax**
+```bash
+uname [options]
+```
+
+Example:
+```bash
+uname -a
+```
+
+👉 **Means:** Output all system information at once (prints kernel name, hostname, release, version, architecture, and OS).
+
+🔍 **Step-by-Step Understanding**
+* 🔸 **System Kernel Name (Default)**: `uname` (displays `Linux` on a Linux server, `Darwin` on macOS).
+* 🔸 **Hardware Architecture**: `uname -m` (displays `x86_64` for Intel/AMD 64-bit systems, `arm64` or `aarch64` for Apple Silicon/ARM processors).
+* 🔸 **Kernel Release**: `uname -r` (displays the exact active kernel version, e.g., `6.1.0-9-amd64`).
+
+---
+
+#### B. System Performance & Runtime (`uptime`)
+
+🧠 **What is uptime?**
+
+👉 `uptime` displays how long the system has been active, the count of active terminal users, and CPU system load averages.
+
+🎯 **Basic Syntax**
+```bash
+uptime
+```
+
+Example output:
+```
+18:45  up 19 days, 22:49, 2 users, load averages: 1.67 1.35 1.21
+```
+
+👉 **Means:**
+* `18:45` ── Current local system time.
+* `up 19 days, 22:49` ── The duration the system has been powered on continuously since the last reboot.
+* `2 users` ── The number of active shell/SSH sessions currently logged into the system.
+* `load averages: 1.67 1.35 1.21` ── The average CPU system load (number of threads queued for processing) over the last **1 minute**, **5 minutes**, and **15 minutes**.
+  * *Context:* A load average of `1.0` on a single-core CPU means the processor is at 100% load. On an 8-core CPU, a load average of `4.0` means it is operating at 50% capacity.
+
+---
+
+#### C. Active Session Audits (`who` & `w`)
+
+🧠 **What is who?**
+
+👉 `who` prints a list of all active shell users currently logged in, showing their username, connection terminal (TTY/PTS), and connection timestamp.
+
+🎯 **Basic Syntax**
+```bash
+who
+```
+
+👉 **w Command Extension:**
+Running `w` displays the `who` user list, combined with their current CPU consumption and **the exact command/process they are executing**.
+```bash
+w
+```
+
+---
+
+#### D. Active Session Identity (`whoami`)
+
+🧠 **What is whoami?**
+
+👉 `whoami` outputs the current session's effective username.
+
+🎯 **Basic Syntax**
+```bash
+whoami
+```
+
+---
+
+#### E. Command Path Resolution (`which`)
+
+🧠 **What is which?**
+
+👉 `which` searches the absolute paths listed in your shell's environmental `$PATH` variable and returns the path to the executable binary.
+
+🎯 **Basic Syntax**
+```bash
+which <command>
+```
+
+Example:
+```bash
+which java
+```
+
+👉 **Means:** Output the exact path to the executable binary of `java` (e.g., `/usr/bin/java`). If a command is not installed or not in your `$PATH`, it outputs nothing and returns a non-zero exit code.
+
+---
+
+#### F. Numeric User & Group Descriptors (`id`)
+
+🧠 **What is id?**
+
+👉 `id` displays the active user's numeric User ID (UID), primary Group ID (GID), and all secondary group associations.
+
+🎯 **Basic Syntax**
+```bash
+id [username]
+```
+
+Example output:
+```
+uid=501(somesh_mac) gid=20(staff) groups=20(staff),80(admin)...
+```
+
+👉 **Means:**
+* `uid=501(somesh_mac)` ── Unique session user identifier. On Linux, `uid=0` is reserved for the superuser `root`.
+* `gid=20(staff)` ── The primary group ID associated with files created by this session.
+* `groups=...` ── Every security group this user profile belongs to (e.g. `admin` or `sudo` memberships granting administrative escalation rights).
+
+---
+
+### 4. Process Management & Job Control
 
 A **process** is a running instance of a program. Every process has a unique **Process ID (PID)** and a parent process.
 
@@ -118,7 +247,7 @@ You can manage jobs directly inside a single shell session:
 
 ---
 
-### 4. Storage & Memory Diagnostics
+### 5. Storage & Memory Diagnostics
 
 #### Memory (RAM)
 Use `free -h` to read system memory allocations:
@@ -136,7 +265,7 @@ Mem:          7.7Gi       3.1Gi       1.2Gi       200Mi       3.4Gi       4.1Gi
 
 ---
 
-### 5. Services & System Logs (`systemd`)
+### 6. Services & System Logs (`systemd`)
 
 On modern Linux, **`systemd`** manages services (daemons).
 
@@ -214,6 +343,11 @@ If your backend application stops responding to traffic:
 | `chmod 600 <key>`| Restrict file permissions to owner-only | Protect SSH private keys (`id_rsa`). |
 | `chown -R u:g <dir>`| Change file owner and group recursively | Reassign server files to run under `www-data`. |
 | `id` | Display user UID, GID, and active groups | Check if your current user has admin groups. |
+| `whoami` | Print the current session's effective username | Confirm current user in shell. |
+| `uname -a` | Print kernel architecture, OS type and versions | Identify server chip architecture (arm vs x86). |
+| `uptime` | Display host run duration, active users, load averages | Evaluate system load and thread congestion. |
+| `who` / `w` | Show users logged into the system and active tasks | Audit live administrative server access. |
+| `which <cmd>` | Locate binary executable paths in $PATH directories | Resolve location of Java, Python, Nginx binaries. |
 | `sudo -i` | Open a root interactive shell | Execute multi-command administrative edits. |
 | `ps aux` | Capture a snapshot of all active processes | Search for running node or python processes. |
 | `kill -15 <PID>`| Request graceful termination (`SIGTERM`) | Normal process shutdown. |
@@ -281,3 +415,10 @@ killall sleep                 # Cleanup
 * Run `df -h` and identify which mount point corresponds to your main root partition `/`.
 * Run `free -h`. Calculate the sum of `free` + `buff/cache` memory, and compare it with the `available` memory metric.
 * Run `du -sh /var` to see how much storage space system records are using.
+
+### 4. Host Context Audits
+* Run `uname -a` and look up your host kernel name and processor architecture type.
+* Run `uptime` and inspect your current system load averages.
+* Run `id` and check your GID, groups, and UID.
+* Run `which ls` and `which grep` to locate the absolute paths of basic tools.
+* Run `who` and `w` to see active user logins and active command pipelines.

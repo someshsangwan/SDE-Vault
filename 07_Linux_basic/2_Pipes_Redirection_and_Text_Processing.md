@@ -103,54 +103,249 @@ Before processing text, you must view it:
   * **`tail -f <file>`**: Follow file additions in real-time (essential for watching live logs).
 
 #### B. Pattern Search (`grep`)
-Finds lines in a file or stream that match a pattern.
-* `grep "pattern" file`: Simple search.
-* `grep -i "pattern"`: Case-insensitive search.
-* `grep -v "pattern"`: Invert match (shows lines that *do not* contain the pattern).
-* `grep -rn "pattern" dir/`: Recursively search all files in directory and show line numbers.
-* `grep -E "regex"`: Search using Extended Regular Expressions.
-* `grep -A 3 -B 1 "pattern"`: Show 3 lines *After* and 1 line *Before* the match (adds context to errors).
+
+🧠 **What is grep?**
+
+👉 `grep` searches text files or streams for lines that match a specific pattern or regular expression.
+
+🎯 **Basic Syntax**
+```bash
+grep [options] "pattern" [file]
+```
+
+Example:
+```bash
+grep "ERROR" production.log
+```
+
+👉 **Means:**
+* `grep` ── the search command
+* `"ERROR"` ── the condition/pattern to search for
+* `production.log` ── where to search
+
+🔍 **Step-by-Step Understanding**
+
+1. **📂 Inputs**
+   * Search a single file: `grep "pattern" file.txt`
+   * Search recursively inside a directory: `grep -r "pattern" ./src`
+   * Search a standard input stream: `cat file.txt | grep "pattern"`
+
+2. **🔎 Options (filters)**
+   * 🔸 **Case-insensitive**: `grep -i "error"` (matches ERROR, error, Error)
+   * 🔸 **Invert match (exclude)**: `grep -v "INFO"` (shows lines that *do not* contain "INFO")
+   * 🔸 **Count occurrences**: `grep -c "ERROR"` (outputs the number of matching lines)
+   * 🔸 **Line numbers**: `grep -n "NullPointer"` (displays the matching line number)
+   * 🔸 **Regex search**: `grep -E "[0-9]{3}-[0-9]{3}"` (enables Extended Regular Expressions)
+
+3. **⚡ Context Controls (Debugging Lifesaver)**
+   * 🔸 **Show lines AFTER**: `grep -A 3 "ERROR"` (shows the matching line and 3 lines after it)
+   * 🔸 **Show lines BEFORE**: `grep -B 2 "ERROR"` (shows the matching line and 2 lines before it)
+   * 🔸 **Show lines BOTH**: `grep -C 2 "ERROR"` (shows the matching line, 2 lines before, and 2 lines after)
+
+---
 
 #### C. Find Files (`find`)
-Locate files in the directory tree based on meta-information.
+
+🧠 **What is find?**
+
+👉 `find` searches for files and directories within a directory hierarchy based on user-defined conditions (name, type, size, time, etc.).
+
+🎯 **Basic Syntax**
 ```bash
-find /var/log -name "*.log"            # Find files ending in .log
-find . -type f -mtime -1                # Find files modified in the last 24 hours
-find . -type f -size +100M              # Find files larger than 100MB
+find <path> <conditions> <actions>
 ```
+
+Example:
+```bash
+find . -name "file.txt"
+```
+
+👉 **Means:**
+* `.` ── search in the current directory and all subdirectories
+* `-name` ── the condition/filter type
+* `"file.txt"` ── what name pattern to search for
+
+🔍 **Step-by-Step Understanding**
+
+1. **📂 Where to search (path)**
+   * `find .` ── search in the current directory
+   * `find /home` ── search in a specific path
+   * `find /` ── search the entire filesystem (slow!)
+
+2. **🔎 Conditions (filters)**
+   * 🔸 **By name**: `find . -name "app.js"`
+   * 🔸 **Case-insensitive name**: `find . -iname "app.js"`
+   * 🔸 **Wildcard name matching**: `find . -name "*.log"`
+   * 🔸 **By type**:
+     * `find . -type f` ── find files only
+     * `find . -type d` ── find directories only
+     * `find . -type l` ── find symbolic links only
+   * 🔸 **By size**:
+     * `find . -size +10M` ── files larger than 10 Megabytes
+     * `find . -size -1M` ── files smaller than 1 Megabyte
+   * 🔸 **By modification time**:
+     * `find . -mtime -1` ── modified in the last 24 hours
+     * `find . -mtime +7` ── older than 7 days
+   * 🔸 **By permissions**: `find . -perm 644`
+
+3. **⚡ Combine Conditions (AND / OR)**
+   * 🔸 **AND (default)**: `find . -type f -name "*.log"` (files AND ending with .log)
+   * 🔸 **OR**: `find . \( -name "*.js" -o -name "*.ts" \)` (files ending in .js OR .ts)
+
+4. **🔥 Actions (what to do after finding)**
+   * 🔸 **Default**: Just print matching paths.
+   * 🔸 **Delete**: `find . -name "*.log" -delete` ⚠️ (deletes matching files instantly)
+   * 🔸 **Execute command**: `find . -name "*.log" -exec rm {} \;`
+     * `{}` ── placeholder representing each found file path
+     * `\;` ── marks the end of the `-exec` command
+   * 🚀 **Faster batch execution**: `find . -name "*.log" -exec rm {} +` (executes in batches, much better performance for large lists)
+
+---
 
 #### D. Extraction & Deduplication (`cut`, `sort`, `uniq`)
-* `cut -d',' -f2`: Extract columns from structured text. `-d` sets the delimiter, `-f` selects the column index.
-* `sort`: Sorts lines of text alphabetically or numerically (`-n`).
-* `uniq`: Removes duplicate adjacent lines.
-  * **`uniq -c`**: Counts occurrences of each unique line. **Note:** `uniq` only checks consecutive lines; you must `sort` the input first!
-  ```bash
-  cat ips.txt | sort | uniq -c | sort -nr  # Count unique IPs and sort by frequency descending
-  ```
+
+🧠 **What are cut, sort, and uniq?**
+
+👉 `cut` extracts sections of lines from files. `sort` orders lines of text. `uniq` filters out or counts duplicate lines.
+
+🎯 **Basic Syntax**
+```bash
+cut -d"<delimiter>" -f<column_number> [file]
+sort [options] [file]
+uniq [options] [file]
+```
+
+🔍 **Step-by-Step Understanding**
+
+1. **📂 Column Slicing (`cut`)**
+   * `cut -d',' -f2 file.csv`
+     * `-d','` ── delimiter is a comma (breaks line by commas)
+     * `-f2` ── select field/column 2
+
+2. **🔎 Ordering (`sort`)**
+   * `sort file.txt` ── alphabetical sort
+   * `sort -n file.txt` ── numeric sort (correctly orders numbers, e.g. 2 before 10)
+   * `sort -r file.txt` ── reverse order sort
+   * `sort -nr file.txt` ── numeric reverse sort (largest values at top)
+
+3. **⚡ Duplicate Management (`uniq`)**
+   * `uniq file.txt` ── removes adjacent duplicate lines
+   * `uniq -c file.txt` ── prefixes lines with their occurrence count
+   * `uniq -d file.txt` ── prints ONLY duplicate lines
+   * ⚠️ **WARNING:** `uniq` only checks **adjacent consecutive lines**. You must always sort the data first!
+     ```bash
+     cat ips.txt | sort | uniq -c | sort -nr  # Count unique IPs and sort by frequency descending
+     ```
+
+---
 
 #### E. Text Counting (`wc`)
-Counts statistics of lines, words, and characters.
-* `wc -l`: Counts lines (very common for counting matching occurrences).
-  ```bash
-  grep "ERROR" production.log | wc -l  # Count how many errors occurred
-  ```
+
+🧠 **What is wc?**
+
+👉 `wc` (Word Count) prints newline, word, and byte counts for files or text streams.
+
+🎯 **Basic Syntax**
+```bash
+wc [options] [file]
+```
+
+🔍 **Step-by-Step Understanding**
+
+1. **🔎 Options (counters)**
+   * 🔸 **Count lines**: `wc -l file.txt` (the most commonly used flag for pipelines)
+   * 🔸 **Count words**: `wc -w file.txt`
+   * 🔸 **Count bytes**: `wc -c file.txt`
+   * 🔸 **Count characters**: `wc -m file.txt`
+
+2. **⚡ Common Pipe Combinations**
+   * `grep "ERROR" app.log | wc -l` ── counts how many error events occurred
+   * `ls /var/log | wc -l` ── counts how many files/directories are in the logs folder
+
+---
 
 #### F. Stream Editor (`sed`)
-Used for quick search-and-replace transformations in a stream.
-* Syntax: `sed 's/find/replace/g' file`
-  ```bash
-  cat config.env | sed 's/DB_PORT=5432/DB_PORT=5433/g' > config.new.env
-  ```
 
-#### G. Report Writer / Column Processor (`awk`)
-A powerful line-oriented language for scanning columns. It breaks each line into columns delimited by whitespace (by default), accessed via `$1`, `$2`, etc. `$0` represents the whole line.
+🧠 **What is sed?**
+
+👉 `sed` is a stream editor used to perform basic text transformations (like search and replace) on input streams or files.
+
+🎯 **Basic Syntax**
 ```bash
-# Print only the 1st and 4th columns of process list:
-ps aux | awk '{print $1, $4}' 
-
-# Print lines where the 9th column (HTTP status code) is 500:
-cat access.log | awk '$9 == 500 {print $0}'
+sed 's/<search>/<replace>/<flags>' [file]
 ```
+
+Example:
+```bash
+sed 's/localhost/127.0.0.1/g' config.env
+```
+
+👉 **Means:**
+* `s` ── substitute action
+* `/localhost/` ── pattern to find
+* `/127.0.0.1/` ── string to replace it with
+* `/g` ── global flag (replace all matches on a line, not just the first one)
+
+🔍 **Step-by-Step Understanding**
+
+1. **📂 In-Place File Editing**
+   * By default, `sed` outputs changes to stdout. To save changes back to the original file:
+     `sed -i 's/foo/bar/g' config.env`  # -i = in-place edit (overwrites the file!)
+
+2. **🔎 Multiple Transformations**
+   * Use `-e` to chain operations:
+     `sed -e 's/foo/bar/g' -e 's/apple/orange/g' config.env`
+
+3. **⚡ Target Specific Lines**
+   * Substitute only on line 5: `sed '5s/foo/bar/g' file.txt`
+   * Substitute only on lines 1 through 10: `sed '1,10s/foo/bar/g' file.txt`
+
+---
+
+#### G. Report Writer & Column Parser (`awk`)
+
+🧠 **What is awk?**
+
+👉 `awk` is a powerful column processing language. It treats each line as a record and splits it into columns (fields) delimited by whitespace by default.
+
+🎯 **Basic Syntax**
+```bash
+awk 'pattern { action }' [file]
+```
+
+Example:
+```bash
+awk '{print $1, $3}' access.log
+```
+
+👉 **Means:**
+* `{print $1, $3}` ── the action (no pattern specified, so it runs on all lines)
+* `$1` ── column 1
+* `$3` ── column 3
+* columns are split by spaces or tabs
+
+🔍 **Step-by-Step Understanding**
+
+1. **📂 Built-in Variable References**
+   * `$0` ── the entire line
+   * `$1`, `$2`, `$3` ── columns 1, 2, and 3
+   * `NF` ── Number of Fields (columns) in the current line. `$NF` points to the *last* column!
+   * `NR` ── Number of Records (line number of the current line)
+
+2. **🔎 Custom Separators**
+   * Use `-F` to define a custom field separator (e.g. comma, colon):
+     * `awk -F',' '{print $2}' file.csv` (extract 2nd column of CSV)
+     * `awk -F':' '{print $1}' /etc/passwd` (extract first column of username list)
+
+3. **⚡ Conditional Parsing**
+   * Run action only if column matches value:
+     `awk '$9 == 500 {print $0}' access.log` (print line if 9th column is status code 500)
+   * Run action if column matches regex:
+     `awk '$3 ~ /ERROR/ {print $1}' app.log` (print 1st column if 3rd column contains "ERROR")
+
+4. **🔥 Calculations and Accumulations**
+   * Sum up a column:
+     `awk '{sum += $5} END {print sum}' data.txt` (adds up values in column 5, prints total at the end)
 
 ---
 

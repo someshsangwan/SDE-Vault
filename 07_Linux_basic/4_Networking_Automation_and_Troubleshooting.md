@@ -25,15 +25,56 @@ SSH is the protocol used to securely connect to a remote shell.
 > [!CAUTION]
 > **Private Key Safety:** Your private key (`id_rsa` or `id_ed25519`) must be kept secret. Linux enforces strict file permissions on keys; if your private key is readable by others (`chmod 644`), SSH will refuse to run. Keep it locked down with **`chmod 600`**.
 
-#### File Transfers: `scp` vs. `rsync`
-* `scp`: Simple secure copy. Good for one-off transfers.
+#### File Transfers: Local (`cp`, `mv`) & Remote (`scp`, `rsync`)
+
+Managing applications requires copying config templates, moving logs, and shipping built artifacts between servers.
+
+##### A. Local File Actions (`cp` & `mv`)
+* **`cp` (Copy)**: Copies files or directories.
+  * *Copy file*: `cp app.config app.config.bak`
+  * *Copy directory*: Use `-r` (recursive) to copy a folder and all its contents:
+    ```bash
+    cp -r ./src ./src_backup
+    ```
+* **`mv` (Move / Rename)**: Moves a file or directory to a different path, or renames it in place.
+  * *Rename*: `mv config.env.template config.env`
+  * *Move*: `mv log.txt /var/log/myapp/`
+
+##### B. Secure Remote Copy (`scp`)
+`scp` uses SSH to transfer files securely between hosts. 
+
+🎯 **Basic Syntax**
+```bash
+scp [options] <source> <destination>
+```
+
+* 🔸 **Local to Remote (Upload)**:
   ```bash
-  scp local-app.jar user@remote:/opt/app/
+  # Copy local-app.jar to /opt/app/ on remote server
+  scp local-app.jar user@remote-ip:/opt/app/
   ```
-* `rsync`: Incremental file transfer. Syncs only *changed* parts of files, supports compression, and can resume aborted transfers.
+* 🔸 **Remote to Local (Download)**:
   ```bash
-  rsync -avz --progress ./src/ user@remote:/opt/src/   # -a = archive, -v = verbose, -z = compress
+  # Copy remote /var/log/nginx/error.log to your local current folder (.)
+  scp user@remote-ip:/var/log/nginx/error.log .
   ```
+* 🔸 **Recursive Directory Copy**: Use `-r` to transfer entire folders.
+  ```bash
+  # Upload local static asset folder to remote server
+  scp -r ./static user@remote-ip:/var/www/html/
+  ```
+
+##### C. Incremental Remote Sync (`rsync`)
+Unlike `scp` which copies the entire file, `rsync` only copies the *differences* between source and destination files. It is faster, can show progress, and can resume aborted transfers.
+```bash
+# Sync local src/ directory to remote opt/src/
+rsync -avz --progress ./src/ user@remote-ip:/opt/src/
+```
+* 👉 **Means:**
+  * `-a` (archive) ── preserves permissions, owners, and modification times recursively.
+  * `-v` (verbose) ── displays transferring file lists.
+  * `-z` (compress) ── compresses data during transmission to save bandwidth.
+  * `--progress` ── displays real-time transfer speeds and percentages.
 
 #### Terminal HTTP Requests: `curl` & `wget`
 Essential for testing REST endpoints and verifying microservice communication.
@@ -231,7 +272,12 @@ find ./src -type f \( -name "*.js" -o -name "*.ts" \) | xargs grep -n "API_TOKEN
 
 | Command | Action | Use Case |
 |:---|:---|:---|
+| `cp <file> <dest>` | Copy local files | Create local file duplicates or backups. |
+| `cp -r <dir> <dest>` | Copy local directories recursively | Duplicate complete asset folders. |
+| `mv <src> <dest>` | Move or rename local files/dirs | Reorganize project paths or rename config files. |
 | `ssh -i <key> <user>@<ip>`| Secure connection using private key | Remote server administrative login. |
+| `scp <file> user@ip:/path`| Secure remote copy from local to remote (upload)| Ship compiled .jar or .bin files to host. |
+| `scp user@ip:/file <local>`| Secure remote copy from remote to local (download)| Fetch crash dumps or log files from server. |
 | `ss -tlnp` | List TCP sockets actively listening | Verify if app bound successfully to port. |
 | `lsof -i :8080` | List processes binding port 8080 | Find process causing "Address in use" error. |
 | `curl -i <URL>` | GET request showing response headers | Debug HTTP API return codes (e.g., CORS, Content-Type). |

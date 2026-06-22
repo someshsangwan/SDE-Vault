@@ -472,6 +472,21 @@ public class AppConfig {
 * **What is the difference between `@Bean` and `@Component`?**
   `@Component` is used on classes you own via component scanning. `@Bean` is used on methods inside `@Configuration` classes, typically to register third-party objects (like `ObjectMapper` or `RestTemplate`) that you cannot annotate directly.
 
+* **What is a Spring Bean? How is it different from a regular Java object?**
+  A Spring Bean is a Java object whose full lifecycle (creation, dependency injection, initialization, and destruction) is managed by the Spring IoC Container. A regular Java object created with `new` is NOT a bean — Spring has no knowledge of it and cannot inject it anywhere.
+
+* **How does Spring discover beans?**
+  Three ways: (1) **Component Scanning** — Spring scans the base package for classes annotated with `@Component`, `@Service`, `@Repository`, `@Controller`, or `@RestController`. (2) **`@Bean` methods** — methods inside `@Configuration` classes explicitly declare beans. (3) **Auto-configuration** — Spring Boot automatically registers common infrastructure beans (DataSource, ObjectMapper, etc.) based on what's on the classpath.
+
+* **What is the default name of a bean? When does it matter?**
+  By default, the bean name is the camelCase of the class name (e.g., `UserService` → `"userService"`) or the method name for `@Bean` methods. It matters when multiple beans of the same type exist — you use `@Qualifier("beanName")` to tell Spring which specific bean to inject.
+
+* **Should JPA entities (`@Entity`) or DTOs be Spring beans?**
+  No. Entities are data objects managed by JPA/Hibernate (not Spring's IoC container). DTOs are simple data carriers that are created with `new` inside methods. Only stateless service, repository, and infrastructure objects should be Spring beans.
+
+* **What is the difference between eager and lazy bean initialization?**
+  By default, all singleton beans are created eagerly at startup — before any request arrives. This means startup failures surface immediately. `@Lazy` delays creation until first use, which speeds up startup but hides configuration errors until the bean is first requested (potentially in production).
+
 ---
 
 ## 🧪 Worked Examples

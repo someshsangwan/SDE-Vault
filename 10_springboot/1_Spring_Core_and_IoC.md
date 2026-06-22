@@ -189,9 +189,58 @@ AFTER (IoC + DI, with Spring):
 
 ---
 
+### 3. How Beans Connect IoC and DI — The Missing Link
 
+IoC, DI, and Beans are three pieces of the same puzzle. People learn them separately and get confused. Here is how they connect:
 
-### 3. Dependency Injection (DI) — Three Styles
+```
+IoC  →  "Spring will manage objects for me"
+          But WHICH objects? Spring can't manage everything.
+          You need to tell Spring: "Manage THIS one."
+
+Bean →  An object you hand over to Spring to manage.
+          You say @Service / @Component on a class =
+          "Spring — this is yours. Create it. Store it. Give it to whoever needs it."
+
+DI   →  Once Spring has all beans created and stored,
+          it WIRES them together — gives Bean A to Bean B
+          when Bean B says "I need A".
+```
+
+**The flow in real life:**
+
+```
+1. You write:  @Service class PaymentService { ... }
+               @Service class OrderService { PaymentService p; ... }
+                    ↓
+2. Spring:     "PaymentService is a Bean — I'll create it."
+               new PaymentService()  →  stored in container
+               "OrderService is a Bean — I'll create it."
+               new OrderService()  →  but wait, it needs PaymentService!
+                    ↓
+3. Spring DI:  "I already have PaymentService in my storage."
+               → Injects it into OrderService's constructor ✅
+                    ↓
+4. Result:     OrderService bean is ready, fully wired, sitting in the container.
+               Whenever someone needs OrderService → Spring gives them THIS instance.
+```
+
+> **The one-paragraph answer for any interview:**
+> *"IoC is the principle — Spring takes over the responsibility of creating and managing objects instead of your classes doing it themselves. The objects Spring manages are called **Beans** — you register them by annotating your class with `@Service`, `@Component`, etc. Once Spring has all beans created and stored in its container, it uses **Dependency Injection** to wire them together — when `OrderService` needs `PaymentService`, Spring looks up the `PaymentService` bean and injects it automatically. So: IoC is the idea, Beans are the objects, and DI is how those objects get connected."*
+
+| Concept | Role | One line |
+|:---|:---|:---|
+| **IoC** | The principle | "Spring controls object creation, not you" |
+| **Bean** | The object | "Any object Spring creates and manages" |
+| **DI** | The wiring | "Spring gives Bean A to Bean B when needed" |
+| **IoC Container** | The engine | "The thing that does all of the above" |
+
+> [!NOTE]
+> **Simple way to remember:** IoC is the **rule**. Beans are the **players**. DI is how players get their **teammates**. The IoC Container is the **coach** that knows all the players and assigns them to each other.
+
+---
+
+### 4. Dependency Injection (DI) — Three Styles
 
 DI is the mechanism the IoC Container uses to supply dependencies. Spring supports three styles:
 

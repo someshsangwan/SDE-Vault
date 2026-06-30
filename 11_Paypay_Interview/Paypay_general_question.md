@@ -208,7 +208,237 @@ graph TD
 
 ## 6. Things to Know for the Technical Interview
 
-Since you solved the coding test (String + Map problems):
-1. **String & Map**: Be ready to explain your solution's time and space complexity — e.g., O(N) time, O(N) space.
-2. **Java Concurrency**: Know about `ConcurrentHashMap`, `CompletableFuture`, thread pools, and how `@Transactional` works in Spring Boot.
-3. **Database Locking**: Know the difference between **Pessimistic locking** (lock the row before reading) and **Optimistic locking** (use a version field, fail if someone else changed it). Both are important when many users are buying stock at the same time.
+---
+
+### 6.1 String & Map
+
+Be ready to explain your solution's time and space complexity.
+
+* If you used a `HashMap` to count characters or store values → **O(N) time, O(N) space**
+* If you used two pointers or a sliding window → **O(N) time, O(1) or O(K) space**
+
+**What to say**: *"I used a HashMap to store the frequency of each character. This lets me look up any character in O(1) time. The total time complexity is O(N) because I loop through the string once."*
+
+---
+
+### 6.2 Java Concurrency
+
+This is very important in fintech because many users buy stocks at the same time. You need to know how to handle this safely.
+
+---
+
+#### A. ConcurrentHashMap
+
+**What it is**: A thread-safe version of `HashMap`. Many threads can read and write to it at the same time without corrupting data.
+
+**Normal HashMap problem**:
+```java
+// UNSAFE — two threads writing at the same time can corrupt data
+Map<String, Integer> map = new HashMap<>();
+map.put("AAPL", 100);
+```
+
+**ConcurrentHashMap solution**:
+```java
+// SAFE — designed for multi-threaded environments
+Map<String, Integer> map = new ConcurrentHashMap<>();
+map.put("AAPL", 100);
+
+// Also has atomic operations like:
+map.putIfAbsent("AAPL", 0);
+map.compute("AAPL", (key, val) -> val == null ? 1 : val + 1);
+```
+
+**What to say**: *"In a fintech app where many threads are updating stock prices or order counts at the same time, I use `ConcurrentHashMap` instead of `HashMap`. It locks only a small segment of the map at a time, so it is much faster than using `synchronized` on the whole map."*
+
+---
+
+#### B. CompletableFuture
+
+**What it is**: A way to run tasks in the background (asynchronously) and combine results when they are done — without blocking the main thread.
+
+**Real use case at PayPay Securities**:
+When a user opens the app, you need to load their stock portfolio, their wallet balance, and live stock prices all at the same time. You don't want to wait for each one to finish before starting the next.
+
+```java
+// Run all three tasks at the same time (parallel, non-blocking)
+CompletableFuture<Portfolio> portfolioFuture =
+    CompletableFuture.supplyAsync(() -> portfolioService.getPortfolio(userId));
+
+CompletableFuture<Balance> balanceFuture =
+    CompletableFuture.supplyAsync(() -> walletService.getBalance(userId));
+
+CompletableFuture<List<StockPrice>> pricesFuture =
+    CompletableFuture.supplyAsync(() -> marketDataService.getPrices());
+
+// Wait for all three to finish, then combine
+CompletableFuture.allOf(portfolioFuture, balanceFuture, pricesFuture).join();
+
+Portfolio portfolio = portfolioFuture.get();
+Balance balance = balanceFuture.get();
+List<StockPrice> prices = pricesFuture.get();
+```
+
+**What to say**: *"I use `CompletableFuture` to run independent API calls or database queries in parallel. For example, when loading the home screen, I fetch the user's portfolio, wallet balance, and market prices at the same time instead of one after another. This makes the response much faster."*
+
+---
+
+#### C. Thread Pools (ExecutorService)
+
+**What it is**: Instead of creating a new thread every time you need one (which is expensive), you keep a pool of threads ready to reuse.
+
+```java
+// Create a thread pool with 10 threads
+ExecutorService executor = Executors.newFixedThreadPool(10);
+
+// Submit a task to run on one of the available threads
+executor.submit(() -> {
+    System.out.println("Processing order in background...");
+});
+
+// Always shut down when done
+executor.shutdown();
+```
+
+**In Spring Boot**, you usually configure this in a `@Configuration` class:
+```java
+@Bean
+public Executor taskExecutor() {
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(5);    // always keep 5 threads alive
+    executor.setMaxPoolSize(20);    // go up to 20 when busy
+    executor.setQueueCapacity(100); // queue up to 100 tasks if all threads are busy
+    executor.initialize();
+    return executor;
+}
+```
+
+**What to say**: *"In production, I never create threads manually. I configure a thread pool via Spring's `ThreadPoolTaskExecutor`. This way, we control how many threads run at once, which prevents the server from getting overloaded during peak trading hours."*
+
+---
+
+#### D. @Transactional in Spring Boot
+
+**What it is**: A Spring annotation that wraps a method in a database transaction. If anything goes wrong inside the method, the entire operation is rolled back — no partial changes are saved.
+
+**Basic usage**:
+```java
+@Service
+public class OrderService {
+
+    @Transactional
+    public void buyStock(Long userId, String ticker, BigDecimal amount) {
+        walletService.deductBalance(userId, amount);  // Step 1: take money
+        portfolioService.addShares(userId, ticker, amount); // Step 2: add shares
+        // If Step 2 fails → Spring automatically rolls back Step 1 too ✅
+    }
+}
+```
+
+**Important things to know**:
+
+| Setting | What it means |
+|---|---|
+| `@Transactional` (default) | Only rolls back on `RuntimeException` — not on checked exceptions |
+| `@Transactional(rollbackFor = Exception.class)` | Rolls back on ALL exceptions — use this in fintech |
+| `@Transactional(readOnly = true)` | Tells the database this is a read-only query — slightly faster |
+| `@Transactional(propagation = REQUIRES_NEW)` | Starts a brand new transaction, even if one is already running |
+
+**What to say**: *"I use `@Transactional` to make sure financial operations are atomic. For example, when a user buys stock, I deduct from their wallet and add to their portfolio in one transaction. If the second step fails, Spring rolls back the wallet deduction automatically. I also always add `rollbackFor = Exception.class` in fintech code so that checked exceptions also trigger a rollback."*
+
+---
+
+### 6.3 Database Locking
+
+This is about preventing **race conditions** — for example, two users both trying to buy the last share at exactly the same time.
+
+---
+
+#### A. Pessimistic Locking
+
+**What it is**: You lock the database row **before** you read it. No one else can read or change that row until you are done.
+
+**Think of it like**: A physical key. You pick up the key, do your work, put the key back. No one else can start until you return the key.
+
+```java
+// In your JPA Repository:
+@Lock(LockModeType.PESSIMISTIC_WRITE)
+@Query("SELECT s FROM StockInventory s WHERE s.ticker = :ticker")
+Optional<StockInventory> findByTickerForUpdate(@Param("ticker") String ticker);
+
+// In your Service:
+@Transactional
+public void buyStock(String ticker, int quantity) {
+    StockInventory inventory = repo.findByTickerForUpdate(ticker);
+    // ← The row is now LOCKED. No other thread can touch it.
+    
+    if (inventory.getAvailableShares() < quantity) {
+        throw new RuntimeException("Not enough shares");
+    }
+    inventory.setAvailableShares(inventory.getAvailableShares() - quantity);
+    repo.save(inventory);
+    // ← Lock is released when the @Transactional method finishes
+}
+```
+
+**When to use**: When you have a lot of conflicting writes (many users buying the same stock at the same time). Safe but slower because other requests have to wait.
+
+---
+
+#### B. Optimistic Locking
+
+**What it is**: You do NOT lock the row when reading. Instead, every row has a `version` number. When you try to save changes, it checks if the version is still the same. If someone else already changed the row, the save fails and you retry.
+
+**Think of it like**: Working on a shared Google Doc. You both edit at the same time. When you try to save, if the other person already saved a newer version, you get a conflict warning.
+
+```java
+// Your Entity class:
+@Entity
+public class StockInventory {
+    @Id
+    private Long id;
+    
+    private String ticker;
+    private int availableShares;
+    
+    @Version  // ← This is the magic field
+    private Long version;
+}
+
+// In your Service:
+@Transactional
+public void buyStock(String ticker, int quantity) {
+    StockInventory inventory = repo.findByTicker(ticker);
+    // version = 5 (read)
+    
+    inventory.setAvailableShares(inventory.getAvailableShares() - quantity);
+    repo.save(inventory);
+    // Spring checks: is version still 5?
+    // If YES → save and set version = 6 ✅
+    // If NO  → someone else changed it → throws OptimisticLockException ❌
+}
+
+// You should catch the exception and retry:
+try {
+    orderService.buyStock(ticker, quantity);
+} catch (OptimisticLockException e) {
+    // retry the operation
+}
+```
+
+**When to use**: When conflicts are rare (most users are buying different stocks). Faster than pessimistic locking because no one is blocked while reading.
+
+---
+
+#### Summary: Which one to use?
+
+| | Pessimistic Locking | Optimistic Locking |
+|---|---|---|
+| **How it works** | Lock the row when reading | Check version number when saving |
+| **When to use** | High conflict — many users buying the SAME stock | Low conflict — most users buying different stocks |
+| **Speed** | Slower (others must wait) | Faster (no waiting, just retry on conflict) |
+| **Risk** | Can cause deadlocks if not careful | Can fail and need a retry |
+| **In PayPay context** | Company inventory for a popular stock like AAPL | User's personal portfolio update |
+
+**What to say in the interview**: *"In a fintech app, I use both. For the company's stock inventory — where many users might be buying the same popular stock at the same time — I use pessimistic locking because I cannot afford a conflict. For updates to a user's own portfolio — which only that user is changing — I use optimistic locking because conflicts are rare, and it's much faster."*
+

@@ -1,146 +1,151 @@
-# PayPay Securities: Interview Preparation Master Guide
+# PayPay Securities: Interview Preparation Guide
 
-Welcome to your preparation guide for the PayPay Securities interview! This document aggregates research on their services, the Japanese Fintech landscape, PayPay's unique startup/engineering culture, system design architectures tailored for retail brokerages, and your prepared verbal scripts for the core interview topics.
-
----
-
-## 1. PayPay Securities Service Overview
-
-### Core Concept & Rebranding
-* **Origin**: Originally founded in 2016 as **One Tap BUY** (Japan's first smartphone-only securities brokerage), it rebranded to **PayPay Securities** in **2021** to deeply align with the SoftBank and Yahoo Japan (now LY Corporation) group ecosystem.
-* **Democratizing Investment**: The service is specifically designed for **investment beginners** and younger generations who might feel intimidated by traditional, complex online brokerages (like SBI Securities or Rakuten Securities).
-* **The "Mini-App" Advantage**: It is available as a standalone app, but its core power lies in being integrated as a **"Mini-App" inside the main PayPay payment app** (which has over 70 million users). Users don't need to open a separate account to start trying it; they can invest using their existing PayPay balance.
-
-### Key Service Features
-1. **Ultra-Low Barriers to Entry**: Users can buy US and Japanese stocks or investment trusts starting from just **100 Yen** (in 1-Yen increments). This is made possible via **fractional share trading** managed internally by the broker.
-2. **Point Investment (Point Unyo)**: A gateway product where users invest their "PayPay Points" (cashback from daily shopping) in simulated funds. This gets them accustomed to market movements without risking real money. Many convert from Point Investment to actual stock investing on PayPay Securities.
-3. **Seamless Wallet Integration**: Deeply connected to the **PayPay Bank** and PayPay Wallet. The "Leave-and-Buy" (Omatase-Konyu) feature allows direct purchasing of stocks using PayPay Money/Bank balance without needing to manually deposit/wire funds into a brokerage account first.
-4. **US Stocks 24/7**: Users can trade major US stocks (e.g., Apple, Tesla, NVIDIA) at any time of day directly in Japanese Yen, removing the barrier of currency conversion calculations.
-5. **NISA Support**: PayPay Securities fully supports Japan's tax-free **NISA** (Nippon Individual Savings Account), offering automated recurring savings plans for mutual funds.
+This is your preparation guide for the PayPay Securities interview. It covers what PayPay Securities does, the Japanese Fintech market, PayPay's work culture, system design, and your ready-to-speak answers for the three main interview topics.
 
 ---
 
-## 2. The Fintech Industry in Japan (2026 Context)
+## 1. What is PayPay Securities?
 
-Japan’s fintech industry is experiencing rapid transformation driven by regulatory changes, government initiatives, and shifting consumer demographics.
+### Background
+* **How it started**: PayPay Securities was first launched in 2016 under the name **One Tap BUY**. It was Japan's first app-only stock brokerage. In 2021, it was renamed to **PayPay Securities** to connect more closely with the PayPay payment app, which is backed by SoftBank and Yahoo Japan.
+* **Who it is for**: It is built for **first-time investors** — people who want to try investing but find traditional brokerages complicated or expensive.
+* **Mini-App inside PayPay**: You can use it as a standalone app, but the real advantage is that it also lives **inside the main PayPay app** as a mini-app. PayPay already has over 70 million users, so those users can start investing without creating a completely new account.
 
-### Cashless Payment Trends
-* **The Cashless Push**: Historically, Japan was a cash-dominant society. The Ministry of Economy, Trade and Industry (METI) set a target to hit a **cashless payment ratio of 80%** (up from ~20% a decade ago). It has currently reached **58.0%**.
-* **QR/Code Payment Boom**: Credit cards still dominate total transaction value, but **QR/Barcode payments** (like PayPay) have exploded to capture over **10% of the cashless market**. PayPay is the clear market leader in this space, having built an extensive merchant network across Japan.
-* **The "Super-App" Strategy**: PayPay has transitioned from a simple QR payment app into a "Super-App" providing banking, securities, insurance, couponing, and food delivery in a single interface.
+### What users can do
+1. **Start with 100 Yen**: Users can buy Japanese or US stocks starting from just 100 Yen. This works because PayPay Securities handles fractional shares internally — so you don't need to buy a whole share.
+2. **Invest with PayPay Points**: Users can take the points they earn from shopping with PayPay and put them into a virtual fund. This is called **Point Investment (Point Unyo)**. It lets people get used to how the market works without spending real money.
+3. **Buy stocks directly from PayPay Wallet**: With a feature called **Leave-and-Buy (Omatase-Konyu)**, users can buy stocks using their PayPay Money or PayPay Bank balance — no need to transfer money to a separate brokerage account first.
+4. **US Stocks 24/7**: Users can buy US stocks like Apple or NVIDIA anytime, in Japanese Yen. No need to deal with currency exchange.
+5. **NISA support**: PayPay Securities supports Japan's tax-free investment program called **NISA**, so users can invest and save on taxes at the same time.
 
-### The "New NISA" Revolution
-* **Shift from Savings to Investment**: Japanese households hold over **2,000 trillion Yen** in personal financial assets, but more than 50% of it has historically been kept in cash and bank savings (which yield near-zero interest). The government introduced the **New NISA (Nippon Individual Savings Account) in 2024** to encourage citizens to invest for retirement.
-* **Massive Adoption**: NISA accounts have reached approximately **28.26 million**. Wealth-tech platforms and retail brokerages are competing aggressively to acquire these new, younger investors. PayPay Securities uses its frictionless integration with PayPay payments to capture a large share of this wave.
+---
+
+## 2. The Fintech Industry in Japan
+
+### Cashless Payments
+* Japan was traditionally a cash-first country. But things are changing fast. The government set a goal to bring the **cashless payment rate to 80%** — it is now at **58%**.
+* **QR code payments** like PayPay are growing the fastest. PayPay is the biggest player in this space, and merchants all over Japan now accept it.
+* PayPay has grown from just a payment app into a **Super-App** — it now covers payments, banking, insurance, investing, and more, all in one place.
+
+### The New NISA Program
+* Japanese households have over **2,000 trillion Yen** saved, but most of it is sitting in bank accounts earning almost no interest.
+* The government launched the **New NISA program in 2024** to encourage people to invest instead of just saving. It gives users a **tax-free** way to grow their money in stocks or mutual funds.
+* By the end of 2025, there were already **28 million NISA accounts**. This is a huge opportunity for investment apps like PayPay Securities.
 
 ---
 
 ### 💡 Topic 1: Interview Q&A — The Fintech Industry
 
-#### 1. The Core Pitch
-> *"The Japanese Fintech industry is at an inflection point, transitioning from a cash-reliant society to a digital-first economy, fueled by a massive national shift from 'savings to investment' through the New NISA program."*
+#### 1. One-Line Summary (Say this first)
+> *"Japan's Fintech industry is changing fast — people are moving from cash to digital payments, and from bank savings to stock investing. PayPay Securities is at the center of both of these changes."*
 
-#### 2. Key Talking Points to Mention
-* **The New NISA (Nippon Individual Savings Account) Impact**: Japan holds ~2,000 trillion Yen in household financial assets, but historically over 50% of this was kept in low-interest cash and bank savings. The New NISA (introduced in 2024) is driving millions of retail investors into the market for the first time.
-* **The Cashless Society Shift**: Cashless transaction ratios have risen to 58.0% of consumer spending. QR/Code payments (with PayPay leading the market) are the fastest-growing sector, becoming the primary daily transaction method for retail users.
-* **Super-App Integration**: Fintech is moving away from isolated services. Today's users expect a unified platform (spending, saving, and investing in one ecosystem) which creates massive backend scaling and synchronization challenges.
+#### 2. Key Points to Remember
+* Japan holds over **2,000 trillion Yen** in household savings, but most of it earns almost nothing. The New NISA (2024) is getting people to invest for the first time.
+* Cashless payments have reached **58%**. PayPay leads the QR payment market.
+* People now want one app for everything — paying, saving, investing. That's the Super-App model.
 
-#### 3. Example Response (Spoken Script)
-> *"I see the Fintech industry in Japan experiencing a massive structural shift. Historically, Japan has been a cash-heavy society with households keeping over half of their wealth in cash and savings. However, we are witnessing two major trends converge right now: the government-driven push towards a cashless society—which has successfully brought cashless transaction ratios to nearly 60%—and the New NISA program launched in 2024, which is actively redirecting idle cash into long-term investments.*
-> 
-> *From a backend engineering perspective, this is highly exciting. Fintech is no longer just about digitizing ledger sheets; it’s about managing real-time data consistency between payment apps and securities ledgers, building highly reliable distributed transactions, and handling massive trading spikes when markets open. PayPay Securities is uniquely positioned at the intersection of these trends, leveraging PayPay’s 70 million user base to democratize wealth building for everyday citizens."*
+#### 3. What to Say in the Interview
+> *"I think Japan's Fintech industry is going through a big change right now. In the past, Japan was very much a cash-first country — most people kept their money in a bank account or as cash at home. But two big things are happening at the same time now.*
+>
+> *First, the government is trying to push everyone toward cashless payments. Apps like PayPay have already helped bring the cashless rate up to nearly 60%. Second, the government launched the New NISA program in 2024, which gives people a tax-free way to invest money in stocks. This is making a lot of people try investing for the first time.*
+>
+> *For me as a backend engineer, this is a really exciting time. Fintech is not just about moving money — it's about making sure the data is always correct between the payment app and the investment account, handling millions of users at the same time, and making the system fast and reliable even when the stock market opens and traffic spikes. PayPay Securities is in a great position because it already has 70 million users from the PayPay app, and it can turn those everyday shoppers into investors."*
 
-#### 4. Potential Follow-Up Questions
-* **Q: Traditional brokerages like SBI or Rakuten have more assets under management (AUM). Why do you think PayPay Securities' approach is competitive?**
-  * *A*: PayPay Securities isn't trying to capture seasoned day traders. It focuses on investment beginners by lowering the psychological and financial barriers. It converts daily spenders into investors using PayPay Points and micro-investments (starting from 100 Yen), which traditional brokers cannot match because they lack PayPay's daily checkout-point ecosystem.
-* **Q: How does security play a role in this industry from your perspective as an SDE?**
-  * *A*: Fintech requires a zero-trust architecture. As a backend engineer, I prioritize secure API design, strict isolation of sensitive personal data (KYC information), data encryption at rest and in transit, and auditing every state transition (often using event-sourcing or double-entry ledgers) to guarantee data integrity.
+#### 4. Follow-Up Questions They Might Ask
+
+* **Q: SBI Securities and Rakuten Securities are much bigger. Why is PayPay Securities competitive?**
+  * *A*: SBI and Rakuten are great for experienced investors who already know what they are doing. But PayPay Securities is going after a completely different group — people who have never invested before and find it scary or complicated. PayPay makes it simple: you can start with just 100 Yen, and you can even use your PayPay Points from daily shopping. No other broker can do this because they don't have a daily payment app with 70 million users behind them.
+
+* **Q: How does security matter in fintech from a backend engineer's point of view?**
+  * *A*: Security is the most important thing in fintech because we handle real people's money. As a backend engineer, I focus on four things: making sure only the right people can use the API, keeping sensitive user data like KYC information safe and encrypted, encrypting all data when it moves over the network or sits in the database, and keeping a complete record of every transaction so we can always check and fix anything that goes wrong.
 
 ---
 
-## 3. PayPay Startup & Engineering Culture
+## 3. PayPay's Work Culture
 
-PayPay is unique because it blends **corporate backing** with a **fast-paced global tech startup** environment.
+PayPay is interesting because it works like a startup — fast, flat, and international — but it is backed by big companies like SoftBank and Yahoo Japan, so it also has resources and stability.
 
-### The Global Engineering Environment
-* **English-First**: Product and engineering divisions use English as their primary language. 
-* **Global Diversity**: Engineers represent **over 50 countries**. PayPay actively recruits talent globally, creating a culture similar to Silicon Valley startups rather than traditional, hierarchical Japanese corporations.
-* **WFA (Work From Anywhere)**: PayPay has a highly flexible remote-work culture, allowing engineers to work from anywhere in Japan.
+### What makes the team special
+* **English is the main language**: The engineering and product teams all communicate in English, not Japanese. So it's easy to work here even if you don't speak Japanese.
+* **Engineers from 50+ countries**: PayPay hires globally. It feels more like a Silicon Valley tech company than a traditional Japanese firm.
+* **Work from anywhere**: PayPay lets engineers work from anywhere in Japan.
 
-### Corporate Values: "PayPay 5 Senses"
-You should weave these values into your behavioral interview answers:
-1. **Speed is our priority**: Fast decision-making, rapid deployment, and iteration.
-2. **No Ego, Team PayPay**: Collaborative problem-solving, respecting diverse perspectives, and working toward collective success.
-3. **Belief in our Product and Team**: Passion for the service and pride in its social impact (democratizing finance).
-4. **Sincerity and Professionalism**: Operating with high integrity, particularly crucial in a regulated financial domain.
-5. **Be Self-Driven (Purpose)**: Taking ownership of challenges and finding meaning in building the product.
+### PayPay's 5 Core Values ("PayPay 5 Senses")
+Try to mention one or two of these in your behavioral answers:
+1. **Speed first**: Make decisions fast. Don't wait too long to get started.
+2. **No Ego**: Work together. Listen to other people's ideas. The team wins, not the individual.
+3. **Believe in the product**: Care about what you are building and the impact it has on users.
+4. **Be sincere and professional**: Especially important in fintech — do things properly and with integrity.
+5. **Find your purpose**: Take ownership. Don't just follow tickets — think about why you are building something.
 
-### The Tech Stack
-PayPay and PayPay Securities leverage a highly modern, cloud-native backend architecture to handle massive concurrent traffic and transaction volume:
-* **Backend**: Java (Spring Boot), Kotlin, Scala, Node.js (Microservices architecture).
-* **Infrastructure**: AWS (EC2, EKS, S3, RDS, KMS, Secrets Manager), running Kubernetes clusters with GitOps (`Argo CD`).
-* **Databases**: **TiDB** (distributed NewSQL for horizontal scale and strong consistency), **Amazon Aurora MySQL**, **DynamoDB**, and **Redis** (for ultra-fast caching).
-* **Event-Driven**: **Apache Kafka** for reliable asynchronous event processing (transactions, balance sync, notifications).
+### Tech Stack (PayPay Securities)
+* **Backend**: Java with Spring Boot, Kotlin, Scala (used across different microservices)
+* **Infrastructure**: AWS + Kubernetes (using Argo CD for GitOps-style deployments)
+* **Databases**: **TiDB** (a distributed SQL database that scales horizontally), **Amazon Aurora MySQL**, **DynamoDB**, **Redis**
+* **Messaging**: **Apache Kafka** for sending events between services (like order placed, payment deducted, etc.)
 
 ---
 
 ### 💡 Topic 2: Interview Q&A — Startup Culture
 
-#### 1. The Core Pitch
-> *"Startup culture means prioritizing speed, taking end-to-end ownership of systems, and working in a flat, multi-cultural environment where the best technical solution wins over organizational hierarchy."*
+#### 1. One-Line Summary (Say this first)
+> *"Startup culture means moving fast, taking full ownership of your work, and communicating openly — without waiting for top-down approval for every small decision."*
 
-#### 2. Key Talking Points to Mention
-* **Speed to Market**: Moving fast, releasing MVPs, gathering telemetry, and iterating quickly rather than spending months in bureaucratic approval loops.
-* **No Ego & Global Team**: Working with engineers from over 50 countries in English. Communication is direct, collaborative, and focused on code quality and user experience.
-* **High Ownership (Ownership Mindset)**: Instead of just picking up pre-defined tickets, SDEs in a startup culture identify system bottlenecks, design architectures, and oversee deployment.
-* **The PayPay 5 Senses**: Explicitly mention that you thrive in an environment defined by speed, team collaboration, and having a clear product purpose.
+#### 2. Key Points to Remember
+* Ship fast, get feedback, fix and improve — don't plan for months before doing anything.
+* Talk directly to your teammates. Don't hide behind tickets and Jira.
+* You are responsible for the full system — not just your small piece.
+* PayPay's values: **Speed**, **No Ego**, **Ownership**.
 
-#### 3. Example Response (Spoken Script)
-> *"To me, startup culture isn't just about table tennis tables or free coffee; it’s an engineering mindset. It means moving with high velocity, deploying code rapidly to gather feedback, and taking complete end-to-end ownership of the systems we build.*
-> 
-> *I highly value PayPay’s 'No Ego' and 'Speed as Priority' values. In my previous experiences, the best code is written when teams communicate directly and prioritize solving the user's problem over organizational ranks. Working in a flat, global engineering environment with teammates from 50+ countries is exactly where I thrive. It allows for a rich exchange of ideas, clean code reviews, and fast execution. At the same time, because PayPay Securities operates under the larger PayPay/SoftBank umbrella, you get the agility of a startup combined with the technical impact of a massive platform."*
+#### 3. What to Say in the Interview
+> *"For me, startup culture is not about the free snacks or the cool office — it's about how you actually work. It means you move quickly, you don't wait for someone to give you all the answers, and you feel real ownership over the things you build.*
+>
+> *I really like PayPay's values — especially 'No Ego' and 'Speed as Priority'. In my experience at Rakuten Pay, the best results came when the team talked to each other directly, shared ideas openly, and focused on solving the user's problem rather than following a long chain of approvals. At PayPay Securities, I would get to work with engineers from over 50 countries, all using English. That kind of environment is where I do my best work. And because PayPay is backed by SoftBank, we also get the stability and the resources of a big company — so it's really the best of both worlds."*
 
-#### 4. Potential Follow-Up Questions
-* **Q: How do you balance speed with system stability in a highly regulated financial application?**
-  * *A*: Speed shouldn't mean cutting corners on quality. We achieve safe speed by investing heavily in automation: comprehensive unit and integration testing, automated CI/CD pipelines, GitOps for infrastructure deployment, and canary releases. By automating quality checks, we can deploy fast while ensuring financial transactions remain 100% stable and compliant.
-* **Q: Can you tell me about a time you had to deal with ambiguous requirements (a common startup scenario)?**
-  * *A*: (Prepare a scenario from your past work: e.g., *"In my previous project, we had to integrate a new payment method with loose specs. Instead of waiting, I drafted a quick API contract, aligned with the frontend team to mock responses, and built a simple prototype within 3 days. This allowed us to clarify the specs with the product owner early, saving weeks of development time."*)
+#### 4. Follow-Up Questions They Might Ask
+
+* **Q: How do you move fast without breaking things in a financial app?**
+  * *A*: Moving fast doesn't mean being careless. If we invest time upfront in writing good tests and setting up automated CI/CD pipelines, then we can deploy often and safely. We catch bugs before they reach production. And for high-risk changes, we use canary releases — we roll out to a small group of users first and watch for errors before deploying to everyone.
+
+* **Q: Tell me about a time you dealt with unclear requirements.**
+  * *A*: This happened at Rakuten Pay. We had to integrate a new payment method, but the specs from the product side were not fully ready yet. Instead of waiting, I wrote a simple API contract based on what I understood, shared it with the frontend team so they could build a mock, and raised the unclear parts with the product owner directly. Because of this, we caught issues early and saved at least two weeks of rework later.
 
 ---
 
-## 4. Structuring Your Pitch: "Why PayPay Securities?"
+## 4. Why PayPay Securities?
 
 ### 💡 Topic 3: Interview Q&A — Reasons to Apply
 
-#### 1. The Core Pitch
-> *"I want to apply to PayPay Securities to solve high-scale microservices and database consistency challenges, work in a diverse global engineering culture, and build tools that democratize stock investing for millions of people in Japan."*
+#### 1. One-Line Summary (Say this first)
+> *"I want to join PayPay Securities because I enjoy solving hard backend problems around money and data consistency, and I want to work in a global team where English is the language and the product has a real impact on people's lives."*
 
-#### 2. Key Talking Points to Mention
-* **Technical Scale & Modern Tech Stack**: Emphasize their use of **Java/Spring Boot**, **Kafka**, and **TiDB** (distributed SQL database). Explain your excitement about working with these technologies at a scale of 70 million potential users.
-* **The Fractional Shares Challenge**: As a backend developer, designing an internal ledger system that manages fractional shares (allocating 100-Yen slices of stock) is an incredibly interesting transactional consistency problem.
-* **The Mission (Social Impact)**: Helping average people learn to invest easily via a familiar payment Super-App.
-* **Language & Diversity**: PayPay is one of the few top-tier tech companies in Japan that welcomes international talent and operates in English, which aligns perfectly with your goals of working in a global environment.
+#### 2. Key Points to Remember
+* **Technical challenge**: Managing money and stock data across two systems (payment and investment) is a hard consistency problem — exactly the kind I enjoy solving.
+* **Product impact**: Helping normal people invest for the first time with just 100 Yen is a meaningful goal.
+* **The team**: English-first, international, modern tech stack (Java, Kafka, TiDB).
 
-#### 3. Example Response (Spoken Script)
-> *"I have three primary reasons for applying to PayPay Securities. First is the sheer technical scale and complexity. Connecting a brokerage app with a major mobile payment system requires solving high-concurrency challenges: managing eventual consistency between the wallet and stock portfolio using Saga patterns and Kafka, and ensuring strong ACID guarantees for fractional share ledgers. Getting to work on these problems using Java/Spring Boot and distributed databases like TiDB at PayPay's scale is a massive draw for me.*
-> 
-> *Second is the product mission. I love the idea of democratizing investments. Making it possible to buy US and Japanese stocks for just 100 Yen directly inside a daily payment app removes the friction that keeps regular people out of the stock market. Building the systems behind that feels incredibly meaningful.*
-> 
-> *Finally, it's the cultural environment. PayPay Securities offers a truly international tech atmosphere in Japan with English as the working language. I want to contribute my Java/Spring Boot and system design skills to a high-performing, diverse team where we can learn from one another and build reliable financial services together."*
+#### 3. What to Say in the Interview
+> *"I have three main reasons for applying to PayPay Securities.*
+>
+> *The first reason is the technical challenge. PayPay Securities connects a payment app with a stock investment service — and making these two systems work together smoothly is a really hard problem. For example, when a user buys stock, we need to take money from their PayPay wallet and update their investment account at exactly the same time. If anything fails in the middle, we need to roll it back safely. This kind of problem — using things like Kafka and the Saga pattern — is exactly what I enjoy working on.*
+>
+> *The second reason is the product itself. I think it is really meaningful to help regular people start investing. Most people in Japan keep their money in a bank account earning almost no interest. PayPay Securities lets you start investing with just 100 Yen. That is a simple but powerful idea, and I want to be part of building the system that makes it work.*
+>
+> *The third reason is the team. PayPay Securities works in English and has engineers from all over the world. I want to grow in that kind of environment, learn from different people, and contribute my Java and system design experience to a team building something that really matters."*
 
-#### 4. Potential Follow-Up Questions
-* **Q: Why backend engineering specifically for a financial app? Why not web frontend or data science?**
-  * *A*: The backend is the core engine of trust in fintech. If the frontend has a bug, it’s a UI issue; if the backend ledger has a transaction bug, it’s a financial and regulatory catastrophe. I love backend development because I enjoy designing robust database schemas, optimizing APIs for low latency, and ensuring data consistency—which are the most critical components of any financial application.
-* **Q: Where do you see yourself in 3 years at PayPay Securities?**
-  * *A*: In 3 years, I want to become a technical leader who owns key domains of our microservices architecture—such as the transactional ledger or internalization engine. I want to help mentor incoming international engineers, optimize our database queries (particularly on TiDB/Aurora), and ensure our deployment pipelines remain fast and stable as we scale to the next 10 million users.
+#### 4. Follow-Up Questions They Might Ask
+
+* **Q: Why backend and not frontend or data science?**
+  * *A*: I like backend because it is where real trust is built in fintech. If the frontend has a bug, a user might see a wrong color or a layout issue — that's fixable. But if the backend records a transaction wrong, a user could lose money, or the company could have a serious compliance problem. I enjoy working on database design, writing safe APIs, and making sure money always goes to the right place.
+
+* **Q: Where do you see yourself in 3 years?**
+  * *A*: In 3 years, I want to be someone the team trusts for important system decisions. I want to own a key service — maybe the transaction ledger or the order processing service — and keep improving it over time. I also want to help new engineers, especially people from outside Japan, to join the team and feel comfortable quickly.
 
 ---
 
-## 5. System Design: Retail Brokerage & Fractional Trading
+## 5. System Design: How a Retail Brokerage App Works
 
-Unlike an institutional stock exchange (which matches wholesale market buyers and sellers), a **retail stock investment app** focuses on user portfolios, wallet integrations, and fractional share allocations.
-
-Below is a system design overview tailored for a service like PayPay Securities.
+A retail brokerage app like PayPay Securities is different from a stock exchange. A stock exchange matches big buyers and sellers. A retail brokerage app like PayPay Securities focuses on managing each user's small investments and connecting them to the market.
 
 ### High-Level System Architecture
 
@@ -177,37 +182,33 @@ graph TD
     end
 ```
 
-### Key Architectural Challenges to Prepare For
+### Key Design Challenges (Know These Well)
 
-#### A. Handling Fractional Shares (Internalization Engine)
-* **The Problem**: Exchanges trade in whole units (e.g., 1 share of NVIDIA or 100 shares of Toyota). If a user invests 100 Yen, they own a tiny fraction (e.g., 0.0034 shares).
-* **The Solution**: 
-  1. **Internal Inventory**: The broker (PayPay Securities) buys whole shares in its own account from the market and keeps them in an inventory.
-  2. **Internal Ledger**: When a user buys 100 Yen worth of a stock, the **Internalization Engine** debits the user's wallet, updates the internal ledger allocation (granting them 0.0034 shares), and allocates it from the company's inventory.
-  3. **Consolidation & Hedging**: If users buy more fractions than the broker holds, the system pools the fractional orders into whole shares and places a market order (via the `Market Execution Gateway`) to replenish the inventory.
-* **Interview Point**: Emphasize how you would design this to maintain strict double-entry bookkeeping so the sum of user fractions always equals the holdings in the custodian/brokerage inventory.
+#### A. Fractional Shares — How does 100 Yen buy a tiny part of a stock?
+* **The Problem**: The stock market only sells whole shares. 1 share of Apple might cost 25,000 Yen. If a user only has 100 Yen, how can they buy Apple stock?
+* **How it works**:
+  1. **Company Inventory**: PayPay Securities buys whole shares with company money and holds them.
+  2. **User Ledger**: When a user spends 100 Yen on Apple stock, the system gives them a fraction of a share (e.g., 0.004 shares) from the company's inventory and records this in their account.
+  3. **Restocking**: When many users buy fractions and the company's inventory gets low, the system pools those orders together, buys more whole shares from the real market, and updates the inventory.
+* **What to say in the interview**: The key design rule is that the total of all user fractions must always equal the total shares the company actually holds. This is called **double-entry bookkeeping**.
 
-#### B. Wallet and Ledger Consistency (Spring Boot & Microservices)
-* **The Problem**: When a user purchases stock, we must deduct funds from their **PayPay Cash Wallet** (or Bank Account) and credit their **Investment Portfolio**. If one fails, the other must roll back (Atomicity).
-* **The Solution**: 
-  * **Eventual Consistency / Saga Pattern**: Since the payment gateway and the securities ledger are separate microservices (and databases), using 2PC (Two-Phase Commit) creates tight coupling and latency bottlenecks. Instead, use an orchestrator or choreograph-based **Saga Pattern** using **Kafka**.
-  * **Workflow**:
-    1. `OrderSvc` receives buy request -> reserves stock -> emits `OrderCreatedEvent`.
-    2. `LedgerSvc` listens -> deducts funds from PayPay Wallet -> emits `FundsDeductedEvent` (or `FundsDeductionFailedEvent`).
-    3. `OrderSvc` listens -> if successful, finalizes stock purchase -> emits `OrderCompletedEvent`. If failed, triggers compensations (unlocks reserved stock).
-* **Interview Point**: Discussing Saga Patterns, compensation transactions, and handling idempotent event processing in Spring Boot is highly valuable.
+#### B. Keeping the Wallet and Investment Account in Sync
+* **The Problem**: When a user buys stock, two things need to happen at the same time — money leaves their PayPay wallet AND shares appear in their investment account. If one fails, we need to undo the other.
+* **How it works (Saga Pattern)**:
+  1. The Order Service receives the buy request → locks the stock → sends an `OrderCreatedEvent` to Kafka.
+  2. The Ledger Service hears this event → takes money from the user's PayPay wallet → sends `FundsDeductedEvent` (or `DeductionFailedEvent` if something goes wrong).
+  3. The Order Service hears the result → if successful, it finalizes the stock purchase. If failed, it unlocks the stock (compensation).
+* **What to say**: We can't use a regular database transaction across two separate services. So we use the **Saga Pattern with Kafka** to coordinate the steps safely, one event at a time.
 
-#### C. High-Availability & Strong Consistency Databases
-* **TiDB**: Since PayPay Securities leverages TiDB, it’s great to highlight *why*. TiDB is a distributed HTAP (Hybrid Transactional and Analytical Processing) database. It is MySQL-compatible, meaning Spring Boot's JPA/Hibernate works seamlessly.
-* **Why TiDB for Fintech?**:
-  1. **Horizontal Scalability**: Allows adding nodes dynamically during market surges (e.g., high traffic on NISA launch or market rallies) without database downtime.
-  2. **ACID Transactions**: Unlike traditional NoSQL (which only has eventual consistency), TiDB provides strong consistency (Snapshot Isolation), ensuring ledger entries and stock balances are always 100% accurate.
+#### C. Why TiDB? (The Database PayPay Uses)
+* **TiDB** is a special database that works like MySQL (so Spring Boot / JPA works with it perfectly) but it can grow horizontally — meaning you can add more machines when traffic is high, without stopping the database.
+* **Why this matters for fintech**: Financial data must always be 100% accurate. TiDB gives both **horizontal scaling** (handle millions of users) and **strong ACID consistency** (money is never double-spent or lost).
 
 ---
 
-## 6. Technical Focus Areas for Sunday's Coding & Next Interviews
+## 6. Things to Know for the Technical Interview
 
-Since you solved the Coding Test (String + Map):
-1. **String / Map manipulation**: Often indicates they value core data structure proficiency. Be ready to discuss the time and space complexity of your test solutions.
-2. **Concurrency in Java**: Be prepared for questions on Thread safety, `ConcurrentHashMap`, `CompletableFuture`, Executor services, and transactional isolation levels in Spring Boot (`@Transactional`).
-3. **Database Locks**: Pessimistic vs. Optimistic locking in Hibernate/JPA. (Essential for preventing race conditions where multiple orders try to deplete the same cash balance or inventory).
+Since you solved the coding test (String + Map problems):
+1. **String & Map**: Be ready to explain your solution's time and space complexity — e.g., O(N) time, O(N) space.
+2. **Java Concurrency**: Know about `ConcurrentHashMap`, `CompletableFuture`, thread pools, and how `@Transactional` works in Spring Boot.
+3. **Database Locking**: Know the difference between **Pessimistic locking** (lock the row before reading) and **Optimistic locking** (use a version field, fail if someone else changed it). Both are important when many users are buying stock at the same time.

@@ -442,3 +442,177 @@ try {
 
 **What to say in the interview**: *"In a fintech app, I use both. For the company's stock inventory — where many users might be buying the same popular stock at the same time — I use pessimistic locking because I cannot afford a conflict. For updates to a user's own portfolio — which only that user is changing — I use optimistic locking because conflicts are rare, and it's much faster."*
 
+---
+
+## 7. System Design Interview — What Problems Can They Give You?
+
+---
+
+### 🥇 Problem 1: Design a Stock Order System *(Most Likely)*
+
+> *"Design a system where users can buy and sell stocks. It should handle high traffic when markets open."*
+
+This is the **most likely problem** — it touches almost everything: APIs, Kafka, locking, ledger, and microservices.
+
+**Key things to cover:**
+
+- **API**: `POST /orders` → receives a buy or sell request from the user
+- **Order states**: `PENDING → PROCESSING → COMPLETED / FAILED`
+- **Kafka**: Order Service publishes an event → Ledger Service and Portfolio Service listen and react
+- **Saga Pattern**: If wallet deduction fails → roll back the stock reservation (compensation)
+- **Idempotency**: If the user clicks "Buy" twice → only process once using a unique `requestId`
+- **Database**: TiDB for orders (strong consistency + horizontal scale), Aurora MySQL for the ledger
+
+**Flow to draw:**
+```
+User → API Gateway → Order Service → Kafka → Ledger Service  (deduct money)
+                                           → Portfolio Service (add shares)
+
+If Ledger fails → Order Service listens → unlocks stock (compensation transaction)
+```
+
+**What to say**: *"When a user places a buy order, I don't process everything in one big database transaction — because the wallet and the portfolio are in different microservices. Instead, I use the Saga pattern over Kafka. The Order Service reserves the stock and publishes an event. The Ledger Service picks it up and deducts the money. If that fails, the Order Service gets a failure event and unlocks the stock. Every step is idempotent — so even if Kafka delivers the message twice, the result is the same."*
+
+---
+
+### 🥈 Problem 2: Design a Wallet / Payment Ledger System
+
+> *"Design a system that keeps track of user balances. It must never lose or duplicate money."*
+
+**Key things to cover:**
+
+- **Double-entry bookkeeping**: Every transaction has a DEBIT row and a CREDIT row. The sum always balances to zero. You never lose track of money.
+- **Never UPDATE a balance directly**: Always INSERT a new transaction row. The current balance = `SUM` of all rows for that user. This gives you a full audit trail.
+- **Idempotency**: Use a unique `transactionId`. If the same request comes twice, check if it already exists — don't process it again.
+- **Optimistic locking**: On the balance table to prevent two threads from reading the same balance and both updating it.
+
+```
+Transaction Table:
+| id | userId | type   | amount   | transactionId (unique) | createdAt |
+|----|--------|--------|----------|------------------------|-----------|
+| 1  | 101    | CREDIT | +5000    | txn-abc-001            | 2024-...  |
+| 2  | 101    | DEBIT  | -1000    | txn-abc-002            | 2024-...  |
+
+Current balance of user 101 = 5000 - 1000 = 4000 ✅
+```
+
+**What to say**: *"I never store a balance as a single column that I update. Instead, I store every transaction as a separate row — credit or debit. The current balance is always calculated as the sum of all rows. This is called an append-only ledger, and it gives me a perfect audit trail, which is mandatory in fintech."*
+
+---
+
+### 🥉 Problem 3: Design a Real-Time Stock Price Feed
+
+> *"Design a system that shows users live stock prices that update every few seconds."*
+
+**Key things to cover:**
+
+- **Data source**: External market feed from the Tokyo Stock Exchange or US market makers — data comes in via WebSocket or FIX protocol
+- **Redis**: Cache the latest price for each stock. Reading from Redis is very fast (under 1ms). You don't hit the database every time.
+- **WebSocket or SSE**: Push price updates to the user's app in real-time — don't make the app poll every second
+- **Rate limiting per user**: Don't push every single tick to every user — batch updates every 1-2 seconds to save bandwidth and battery
+
+**Flow to draw:**
+```
+Market Exchange → Price Ingestion Service → Redis (latest price cache)
+                                          → Kafka (price change events)
+
+User App ←(WebSocket)← Price Push Service ← Kafka consumer (reads events, pushes to connected users)
+```
+
+**What to say**: *"I separate the ingestion layer from the delivery layer. The ingestion service pulls prices from the exchange and writes them to Redis and Kafka. A separate push service reads from Kafka and sends updates to connected users over WebSocket. Redis acts as the source of truth for the current price — so if a user connects late, they immediately get the latest price from Redis without waiting for the next update."*
+
+---
+
+### Problem 4: Design a Notification System
+
+> *"Design a system that sends users a push notification when their order is completed or when a stock hits their target price."*
+
+**Key things to cover:**
+
+- **Kafka consumer**: Listen for `OrderCompletedEvent` or `PriceAlertEvent` → trigger notification
+- **Fanout**: One event → send Push notification + Email + In-app notification at the same time (use `CompletableFuture` to run them in parallel)
+- **Retry with backoff**: If push notification fails → retry 3 times with exponential backoff (wait 1s, 2s, 4s)
+- **Deduplication**: Kafka delivers at-least-once → check `notificationId` before sending — don't send the same notification twice
+
+**Flow:**
+```
+OrderSvc → Kafka (OrderCompletedEvent)
+        → Notification Service
+              ├── Push Notification (Firebase / APNs)
+              ├── Email (SendGrid / SES)
+              └── In-App Badge Update
+```
+
+---
+
+### Problem 5: Design a Rate Limiter
+
+> *"Design a system that prevents one user from hitting your API too many times."*
+
+**Key things to cover:**
+
+- **Token Bucket algorithm**: Each user gets N tokens per minute (e.g., 60). Each request uses 1 token. If tokens run out → reject with HTTP `429 Too Many Requests`
+- **Redis + Lua script**: Store the token count in Redis. Use an atomic Lua script to check-and-decrement in one step — no race condition between two threads
+- **Where to put it**: At the **API Gateway** level — before the request reaches your microservices (so bad actors are stopped early)
+
+```java
+// Simplified Token Bucket in Redis (pseudocode)
+String key = "rate_limit:" + userId;
+Long remaining = redis.decr(key);  // atomic decrement
+
+if (remaining == null) {
+    redis.set(key, 59, TTL = 60 seconds); // first request this minute
+} else if (remaining < 0) {
+    throw new TooManyRequestsException(); // 429
+}
+```
+
+---
+
+## 🎯 How to Structure ANY System Design Answer (45-50 min)
+
+Use this structure every time — it shows you are organized and thorough:
+
+```
+Step 1 — Ask Clarifying Questions (5 min)
+  "How many users? Read-heavy or write-heavy?
+   Do we need real-time or is eventual consistency okay?
+   Any regulatory requirements like audit logs?"
+
+Step 2 — High-Level Design (10 min)
+  Draw the big boxes: Client → API Gateway → Services → DB
+  Name the main components, don't go into detail yet
+
+Step 3 — Deep Dive on Hard Parts (20 min)
+  Pick 2-3 tricky parts and explain in detail
+  (e.g., "Here's exactly how I handle the Saga rollback...")
+
+Step 4 — Bottlenecks & Scaling (10 min)
+  "What breaks first at 10x traffic?"
+  → Kafka buffers load spikes, TiDB scales horizontally, Redis handles caching
+
+Step 5 — Summary (5 min)
+  Recap your main design decisions and the tradeoffs you made
+```
+
+---
+
+## 📌 Key Concepts to Drop in ANY Fintech System Design
+
+Mentioning these will make you sound like a real fintech backend engineer:
+
+| Concept | When to mention it |
+|---|---|
+| **Idempotency** | Any time money moves — "I always use a unique transactionId to prevent double processing" |
+| **Saga Pattern** | Any time two services need to stay in sync — "I use Saga over Kafka instead of 2PC" |
+| **Kafka** | Any async communication — "services are decoupled through Kafka events" |
+| **TiDB / Aurora** | Database choice — "TiDB gives horizontal scale and ACID at the same time" |
+| **Redis** | Caching prices, sessions, rate limits — "I cache the latest stock price in Redis for sub-millisecond reads" |
+| **Optimistic / Pessimistic Lock** | Any shared data — "I use pessimistic lock for the company inventory, optimistic for user portfolios" |
+| **Double-entry bookkeeping** | Any wallet or ledger — "I never update a balance, I only append transaction rows" |
+| **CompletableFuture** | Any parallel work — "I load portfolio, balance, and prices in parallel to reduce latency" |
+| **@Transactional + rollbackFor** | Any DB write in Spring Boot — "I always set rollbackFor = Exception.class in fintech" |
+
+---
+
+> 💡 **Practice Tip**: Draw the **Stock Order System** (Problem 1) on paper tonight. It is the most likely question and naturally covers Kafka, Saga, locking, ledger, and microservices — all in one design.

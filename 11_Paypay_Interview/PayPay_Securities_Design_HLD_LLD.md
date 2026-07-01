@@ -258,11 +258,78 @@ This is the round-4 differentiator. Interviewers probe "how do you keep balances
 
 ## 5. Deep Dive — Real-Time Price Feed (read-heavy path)
 
-- **Ingestion**: connect to exchange market-data feed → **normalize** → publish to **Kafka**, one **partition per symbol** (preserves per-symbol ordering, enables horizontal scale).
+### 5.0 Where do prices even come from? (how PayPay gets prices from TSE)
+Before you can cache or push a price, you have to *receive* it. There are **two separate channels** to the exchange — don't confuse them:
+- **Order gateway (OUT):** you *send orders* to TSE via FIX, get execution reports back. (Step 2.)
+- **Market data feed (IN):** you *receive prices* — a firehose of updates flowing into you. This is what §5 is about.
+
+**The exchange broadcasts a market-data feed.** TSE runs a system called **arrowhead** that continuously **publishes** every price change, trade, and order-book update as a real-time stream. This feed is a paid product — brokers subscribe to it. Two ways to receive it:
+- **Direct feed:** connect straight to TSE's market-data servers; fastest, but you handle their raw (often binary) protocol yourself.
+- **Via a market-data vendor/aggregator** (e.g. QUICK in Japan, Refinitiv, Bloomberg): they collect exchange feeds and hand you a cleaner, normalized stream. Easier, common for retail brokers.
+
+**Multicast:** exchanges usually *broadcast* the feed like a radio station — transmit once, and every subscribed broker tunes in and receives it simultaneously (no separate copy per broker).
+
+So the ingestion flow is: `TSE (arrowhead) ──broadcast feed──► PayPay Market Data Service ──normalize──► Kafka → Redis → WebSocket → user`. PayPay Securities, as a licensed Japanese broker, subscribes to TSE market data (direct or via a Japanese vendor like QUICK).
+
+### 5.1 Pipeline (once prices are flowing in)
+- **Ingestion**: the **Market Data Service** subscribes to the exchange feed → **normalize** (convert TSE's raw format into our clean internal format) → publish to **Kafka**, one **partition per symbol** (preserves per-symbol ordering, enables horizontal scale).
 - **Cache**: latest price per symbol in **Redis** (sub-ms reads). This absorbs the 100:1 read load — clients don't hit the DB for a quote.
 - **Fan-out to clients**: **WebSocket** servers (stateful, many connections) subscribe to Kafka topics and push updates. Users subscribe only to symbols on their screen → reduce fan-out.
 - **Historical data**: time-series store (TimescaleDB / or DynamoDB + S3) for charts; served from read replicas, not the hot path.
 - **Graceful degradation**: under extreme load, serve slightly-stale **cached** prices and prioritize the **order-execution** path over cosmetic price ticks.
+
+### 5.2 The price flows like this
+```
+Exchange sends price
+      │
+   [Kafka]  ← one lane per stock (order kept, scales wide)
+      │
+      ├──► [Redis]  ← store latest price (fast reads, the "whiteboard")
+      │
+      └──► [WebSocket servers] ──push──► millions of user phones
+```
+
+### 5.3 Why do we need Redis if WebSocket already pushes to phones?
+They *sound* redundant but solve two different problems:
+- **WebSocket** streams a price **when it changes** to phones **already watching** that stock. It's a live *pipe* with **no memory** — it only fires on change and forgets everything.
+- **Redis** holds the **current** price so *anyone* can ask "what's the price right now?" and get an instant answer.
+
+WebSocket alone breaks in these very common moments:
+1. **You just opened the app** — the price hasn't changed in the last few seconds, so no push is coming. What number do you show *now*? → read Redis.
+2. **Order validation / risk check** — a backend service (not a phone) needs the current price to validate a market order or reserve funds. → read Redis.
+3. **Portfolio valuation** — backend needs the current price of every held stock, instantly. → read Redis.
+4. **A new WebSocket connection needs a starting value** — on connect, send the latest known price from Redis as a baseline, then stream changes on top.
+
+| | Redis | WebSocket |
+|---|---|---|
+| Answers | "What's the price **right now**?" (a question, any time) | "The price **just changed** to X" (an event, on change) |
+| Model | **Pull** — you ask, it answers | **Push** — it tells you when there's news |
+| Stores state? | ✅ holds the *current* value | ❌ no memory, just a live pipe |
+| Users | anyone, any moment (app load, backend checks, valuations) | phones actively watching a stock |
+
+**One-liner:** *"Redis is the **source of truth for the current price** (pull, has memory); WebSocket is the **delivery mechanism for updates** (push, no memory). A freshly-opened app or a backend order-check reads Redis; a phone watching live gets WebSocket pushes. You need both."*
+
+### 5.4 Do we store market prices in a DB?
+Split it into two different things people call "price":
+
+**1. Current/live price** ("Toyota is ¥3,000 *right now*") → **NOT stored durably in a DB.**
+- **Disposable** — replaced by a new value in ~1 second; nobody needs the exact price 3s ago.
+- **Too fast** — thousands of ticks/sec across all stocks would hammer a durable DB for data we immediately overwrite.
+- **Not our data** — the exchange is the source of truth. If **Redis** loses it, the next tick from the TSE feed refills it. So it lives only in Redis (memory); no durability needed.
+
+**2. Historical prices** ("Toyota every minute for 5 years", for charts/analytics) → **YES, stored** — but **NOT in the main transactional DB.**
+- Use a **time-series DB** built for timestamped data: **TimescaleDB / InfluxDB**, or PayPay-style **DynamoDB / S3** for older data.
+- Keep the price firehose *out* of Aurora/MySQL so it never competes with or endangers the money path.
+
+| Data | Where | Durable? | Why |
+|---|---|---|---|
+| **Current price** | Redis (memory) | ❌ No | Disposable, re-fetchable from exchange |
+| **Historical prices** (charts) | Time-series DB (Timescale / DynamoDB / S3) | ✅ Yes | Users want charts; must survive |
+| **Orders, wallet, portfolio** | Transactional DB (Aurora/MySQL) | ✅ Yes | Money — must be correct & durable |
+
+**Intuition:** current price = the *time on a clock* (read it, don't save every second); historical prices = a *logbook* (keep it, in a store built for logging); money = a *bank ledger* (sacred, separate, always durable).
+
+**One-liner:** *"Three storage tiers by purpose: **Redis** for the disposable current price, a **time-series DB** for historical charts, and the **transactional DB** strictly for money. The live price firehose never touches the money DB."*
 
 ---
 

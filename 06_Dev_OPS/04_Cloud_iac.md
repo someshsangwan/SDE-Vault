@@ -1,14 +1,14 @@
 # Chapter 4 — Cloud & Infrastructure as Code (My Notes)
 
-> Reference repo: `/Users/somesh.sangwan/Desktop/rcash_api-roc`
-> Real files taught: `roc/prod/gslb/gslb-rcash-api-prod_jpe_pri.json`, `roc/prod/lbaas/db/80_apply_lbaas.sh`
-> Key realization: **this whole repo IS an Infrastructure-as-Code repo** (Rakuten One Cloud / ROC).
+> Reference repo: `/Users/youruser/Desktop/acme-api-infra`
+> Real files taught: `icp/prod/gslb/gslb-acme-api-prod_jpe_pri.json`, `icp/prod/lbaas/db/80_apply_lbaas.sh`
+> Key realization: **this whole repo IS an Infrastructure-as-Code repo** (an internal cloud platform (ICP)).
 
 ---
 
 ## Section 1 — Cloud fundamentals
 
-Instead of buying servers, rent resources from a provider (AWS/Azure/GCP, or Rakuten One Cloud/ROC).
+Instead of buying servers, rent resources from a provider (AWS/Azure/GCP, or an internal cloud platform (ICP)).
 
 | Building block | What | Office equivalent |
 |---------------|------|-------------------|
@@ -16,7 +16,7 @@ Instead of buying servers, rent resources from a provider (AWS/Azure/GCP, or Rak
 | Storage | Disks, object storage | Volumes, DBaaS storage |
 | Networking | Virtual networks, LBs, DNS | LBaaS, GSLB |
 | Database | Managed DB (you don't run the DB software) | DBaaS (MariaDB/MySQL) |
-| IAM | Identity & Access — who can do what | ROC tokens (60_roc_token.sh) |
+| IAM | Identity & Access — who can do what | ICP tokens (60_icp_token.sh) |
 
 > "as a Service" (aaS): provider manages hardware/patching/HA; you just request & use.
 > CaaS, LBaaS, DBaaS all follow this.
@@ -45,7 +45,7 @@ Write infrastructure as TEXT FILES, store in Git, apply with a tool. Files = sou
 
 Benefits: repeatable, versioned, reviewable (PRs), self-documenting, recoverable.
 
-> **rcash_api-roc IS an IaC repo.** Every LB, DNS entry, server group = a JSON file
+> **acme-api-infra IS an IaC repo.** Every LB, DNS entry, server group = a JSON file
 > applied by shell scripts. README: "holds the BCP components and One Cloud setup."
 
 ---
@@ -59,14 +59,14 @@ Describe desired end state; tool figures out how. → Terraform, K8s YAML, your 
 Write exact commands in order. → shell scripts, partly Ansible.
 
 > Your repo is HYBRID: JSON files are declarative (desired LB/GSLB state),
-> shell scripts are imperative (get token, call ROC API to apply JSON).
+> shell scripts are imperative (get token, call ICP API to apply JSON).
 > Very common: declarative config + imperative glue scripts.
 
 ---
 
 ## Section 4 — Terraform (industry-standard IaC tool)
 
-Office uses ROC, but Terraform is the must-know tool for the job market. Concepts map directly.
+Office uses ICP, but Terraform is the must-know tool for the job market. Concepts map directly.
 
 ### Core workflow
 ```
@@ -82,8 +82,8 @@ provider "aws" {
   region = "ap-northeast-1"          # Tokyo
 }
 
-resource "aws_lb" "rcash_api" {
-  name               = "rcash-api-lb"
+resource "aws_lb" "acme_api" {
+  name               = "acme-api-lb"
   internal           = true
   load_balancer_type = "application"
   health_check {
@@ -116,11 +116,11 @@ Teams store state remotely + locked (so two applies don't collide).
 ## Section 5 — Real IaC files explained
 
 ### GSLB file (DNS-based global load balancing) — defined as code!
-`roc/prod/gslb/gslb-rcash-api-prod_jpe_pri.json`:
+`icp/prod/gslb/gslb-acme-api-prod_jpe_pri.json`:
 ```json
 {
-  "name": "rcash-api",
-  "domain": "rcash-api.gslb.dcnw.rakuten",   // DNS name users hit
+  "name": "acme-api",
+  "domain": "acme-api.gslb.dcnw.internal",   // DNS name users hit
   "internet": "private",                      // internal network only
   "ttl": 60,                                  // DNS cache 60s → fast failover
   "failover_list": [
@@ -141,7 +141,7 @@ Teams store state remotely + locked (so two applies don't collide).
 - Filename `jpe_pri` = jpe2b primary; matching `jpw_pri` = jpw1a primary.
 
 ### Apply script (imperative glue)
-`roc/prod/lbaas/db/80_apply_lbaas.sh`:
+`icp/prod/lbaas/db/80_apply_lbaas.sh`:
 ```bash
 #!/bin/bash
 set -euo pipefail                  # -e exit on error, -u error on undefined var, pipefail catch pipe errors
@@ -154,20 +154,20 @@ apply_lbaas $TENANT_NAME $LB_NAME "$this" "db-lb-*.json"  # apply matching JSON 
 ### Numbered script workflow (= Terraform's plan/apply loop)
 | Script | Role | Terraform equivalent |
 |--------|------|---------------------|
-| 60_roc_token.sh | get auth token (IAM) | credentials/auth |
+| 60_icp_token.sh | get auth token (IAM) | credentials/auth |
 | 10_get_*.sh | READ current state | terraform plan |
 | 80_apply_*.sh | APPLY desired state | terraform apply |
 
 ---
 
-## Section 6 — Mapping ROC ↔ generic cloud / Terraform
+## Section 6 — Mapping ICP ↔ generic cloud / Terraform
 ```
-ROC (your office)              ≈  Generic cloud / Terraform
+ICP (your office)              ≈  Generic cloud / Terraform
 ─────────────────────             ──────────────────────────────
 GSLB JSON files                ≈  DNS + global LB (Route53)
 LBaaS JSON files               ≈  Load balancer resources (aws_lb)
 servergroups JSON              ≈  Target groups / backend pools
-60_roc_token.sh                ≈  IAM auth / credentials
+60_icp_token.sh                ≈  IAM auth / credentials
 10_get_*.sh                    ≈  terraform plan (read state)
 80_apply_*.sh                  ≈  terraform apply (enforce state)
 JSON files in Git              ≈  .tf files in Git (versioned infra)

@@ -1,6 +1,6 @@
 # Chapter 2 — Orchestration with Kubernetes (My Notes)
 
-> Reference repo: `/Users/somesh.sangwan/Desktop/rcash_api-roc`
+> Reference repo: `/Users/youruser/Desktop/acme-api-infra`
 > Hands-on requires minikube — try on personal PC (not office PC).
 
 ---
@@ -24,7 +24,7 @@ Running containers manually across many servers breaks down fast:
 You declare **desired state** → K8s makes reality match it, forever.
 
 ```
-You: "Run 3 copies of rcash-api at all times"
+You: "Run 3 copies of acme-api at all times"
 
 K8s handles:
   ✓ Picks servers with free resources
@@ -90,11 +90,11 @@ You almost never create Pods directly — use Deployments instead.
 apiVersion: v1
 kind: Pod
 metadata:
-  name: rcash-api-pod
+  name: acme-api-pod
 spec:
   containers:
-    - name: rcash-api
-      image: rcash-api:latest
+    - name: acme-api
+      image: acme-api:latest
       ports:
         - containerPort: 8080
 ```
@@ -106,20 +106,20 @@ Declares "run N copies, keep them alive, handle updates gracefully."
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rcash-api
+  name: acme-api
 spec:
   replicas: 3                      # always keep 3 running
   selector:
     matchLabels:
-      app: rcash-api
+      app: acme-api
   template:
     metadata:
       labels:
-        app: rcash-api
+        app: acme-api
     spec:
       containers:
-        - name: rcash-api
-          image: rcash-api:1.0
+        - name: acme-api
+          image: acme-api:1.0
           ports:
             - containerPort: 8080
           resources:
@@ -140,10 +140,10 @@ Pods are temporary (different IP each time). A Service gives a stable name + IP 
 apiVersion: v1
 kind: Service
 metadata:
-  name: rcash-api-service
+  name: acme-api-service
 spec:
   selector:
-    app: rcash-api                 # routes to pods with this label
+    app: acme-api                 # routes to pods with this label
   ports:
     - port: 80
       targetPort: 8080
@@ -184,7 +184,7 @@ Store config outside the image — no rebuild needed to change a setting.
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: rcash-api-config
+  name: acme-api-config
 data:
   DB_HOST: "mariadb-service"
   TZ: "Asia/Tokyo"
@@ -195,7 +195,7 @@ Use in pod:
 ```yaml
 envFrom:
   - configMapRef:
-      name: rcash-api-config
+      name: acme-api-config
 ```
 
 ### Secret — sensitive config
@@ -205,7 +205,7 @@ Same as ConfigMap but for passwords/tokens. Base64 encoded at rest.
 apiVersion: v1
 kind: Secret
 metadata:
-  name: rcash-api-secrets
+  name: acme-api-secrets
 type: Opaque
 data:
   DB_PASSWORD: c2VjcmV0MTIz    # base64 encoded value
@@ -219,8 +219,8 @@ Smart HTTP router — routes traffic by hostname or URL path.
 
 ```
 Internet → Ingress
-  api.rcash.com   → rcash-api Service
-  admin.rcash.com → rcash-admin Service
+  api.acme.com   → acme-api Service
+  admin.acme.com → acme-admin Service
 ```
 
 > Office GSLB (Global Server Load Balancer) sits in front of Ingress —
@@ -248,15 +248,15 @@ kubectl exec -it <pod-name> -- sh      # shell into pod (like docker exec)
 
 # DEPLOYMENTS
 kubectl get deployments
-kubectl describe deployment rcash-api
-kubectl scale deployment rcash-api --replicas=5
-kubectl rollout status deployment rcash-api    # watch rollout
-kubectl rollout history deployment rcash-api   # history
-kubectl rollout undo deployment rcash-api      # roll back
+kubectl describe deployment acme-api
+kubectl scale deployment acme-api --replicas=5
+kubectl rollout status deployment acme-api    # watch rollout
+kubectl rollout history deployment acme-api   # history
+kubectl rollout undo deployment acme-api      # roll back
 
 # SERVICES
 kubectl get services
-kubectl describe service rcash-api-service
+kubectl describe service acme-api-service
 
 # APPLY / DELETE
 kubectl apply -f deployment.yaml       # create or update
@@ -270,27 +270,27 @@ kubectl config set-context --current --namespace=qa  # switch default namespace
 
 ---
 
-## Section 6 — How office uses Kubernetes (rcash_api-roc)
+## Section 6 — How office uses Kubernetes (acme-api-infra)
 
 ### Deploy scripts
 ```bash
-cd roc/qa/jpe2b/
+cd icp/qa/jpe2b/
 ./00_deploy.sh
 ```
 Almost certainly runs `kubectl apply -f` — applying Deployment + Service YAMLs to the cluster.
 
 ### Multiple environments
 ```
-.gitlab-rcash-dev.yaml   → kubectl apply to dev namespace
-.gitlab-rcash-qa.yaml    → kubectl apply to qa namespace
-.gitlab-rcash-stg.yaml   → kubectl apply to stg namespace
-.gitlab-rcash-prod.yaml  → kubectl apply to prod namespace
+.gitlab-acme-dev.yaml   → kubectl apply to dev namespace
+.gitlab-acme-qa.yaml    → kubectl apply to qa namespace
+.gitlab-acme-stg.yaml   → kubectl apply to stg namespace
+.gitlab-acme-prod.yaml  → kubectl apply to prod namespace
 ```
 Same YAML, different namespace (or different cluster) per environment.
 
 ### KUBECTL_IMAGE in CI
 ```yaml
-KUBECTL_IMAGE: registry-jpe2.r-local.net/.../bitnami/kubectl:1.19.9
+KUBECTL_IMAGE: registry-jpe2.acme-registry.internal/.../bitnami/kubectl:1.19.9
 ```
 The CI pipeline spins up THIS Docker container, runs `kubectl apply` from inside it,
 and the deploy happens. CI runner = Docker container that talks to K8s cluster.
@@ -394,7 +394,7 @@ kubectl get pods                          # back to 2
    ┌─────────────────────────────┐
    │   ┌─────────────────────┐   │
    │   │  Container           │   │  ← shares the Pod's IP
-   │   │  (rcash-api :8080)   │   │
+   │   │  (acme-api :8080)   │   │
    │   └─────────────────────┘   │
    └─────────────────────────────┘
 ```
@@ -453,22 +453,22 @@ and worker — so you can learn without renting servers.
 Full journey of a user request:
 
 ```
-User (https://api.rcash.com)
+User (https://api.acme.com)
    │
    ▼
-1. GSLB / DNS        → "api.rcash.com → jpe2b datacenter"
+1. GSLB / DNS        → "api.acme.com → jpe2b datacenter"
    │
    ▼
 2. Load Balancer     → (LBaaS / LoadBalancer Service) spreads traffic
    │
    ▼
-3. Service           → stable cluster address, "send to any healthy rcash-api Pod"
+3. Service           → stable cluster address, "send to any healthy acme-api Pod"
    │  (load balances, picks a healthy Pod)
    ▼
 4. Pod (10.244.0.5)  → receives traffic on its IP
    │
    ▼
-5. Container :8080   → your rcash-api answers
+5. Container :8080   → your acme-api answers
 ```
 
 Yes — request goes to the Pod, then the Pod hands it to the container inside.
@@ -481,11 +481,11 @@ Because **Pod IPs keep changing:**
 - New deploy → all Pods replaced → all new IPs
 
 The Service has a **stable IP + name that never changes.** It always tracks which Pods
-are alive (by label, e.g. `app: rcash-api`) and forwards to a healthy one.
+are alive (by label, e.g. `app: acme-api`) and forwards to a healthy one.
 Like a receptionist who always knows which staff are currently working.
 
 ```
-Service (stable: rcash-api-service)
+Service (stable: acme-api-service)
    ├──► Pod 1 (10.244.0.5)   ← come and go,
    ├──► Pod 2 (10.244.0.6)      get new IPs constantly
    └──► Pod 3 (10.244.0.7)
@@ -535,8 +535,8 @@ K8s Service   → picks the POD                    (across pods on those nodes)
 ### Complete request journey (with IPs)
 
 ```
-STEP 1 — User types api.rcash.com
-   Browser asks DNS: "IP for api.rcash.com?"
+STEP 1 — User types api.acme.com
+   Browser asks DNS: "IP for api.acme.com?"
         ▼
 STEP 2 — GSLB (smart DNS) answers
    Checks: which datacenter is healthy + closest?
@@ -545,19 +545,19 @@ STEP 2 — GSLB (smart DNS) answers
 STEP 3 — Browser connects to 203.0.113.10 (LBaaS)
    LBaaS checks healthy worker nodes, picks Node 2, forwards into cluster
         ▼
-STEP 4 — K8s Service (rcash-api-service) receives it
-   Knows all healthy Pods with label app=rcash-api, picks Pod 10.244.0.6
+STEP 4 — K8s Service (acme-api-service) receives it
+   Knows all healthy Pods with label app=acme-api, picks Pod 10.244.0.6
         ▼
 STEP 5 — Pod 10.244.0.6 receives it
    Forwards to the container inside on port 8080
         ▼
-STEP 6 — rcash-api container answers
+STEP 6 — acme-api container answers
    Java/Payara processes, response travels back up the same chain
 ```
 
 | Step | Component | Decides | Returns/does |
 |------|-----------|---------|--------------|
-| 1 | DNS query | — | Browser asks "IP for api.rcash.com?" |
+| 1 | DNS query | — | Browser asks "IP for api.acme.com?" |
 | 2 | **GSLB** | Which **datacenter**? | Returns IP of that datacenter's LB |
 | 3 | **LBaaS** | Which **machine**? | Forwards request into cluster |
 | 4 | **K8s Service** | Which **Pod**? | Routes to a healthy Pod IP |
@@ -580,11 +580,11 @@ Zoom path: **planet → datacenter → machine → Pod → container**
 Region jpe2b
   Worker Node 1      Worker Node 2     Worker Node 3
   ┌────────────┐    ┌────────────┐    ┌────────────┐
-  │ Pod (rcash)│    │ Pod (rcash)│    │ Pod (rcash)│
-  │ Pod (rcash)│    │ Pod (rcash)│    │ Pod (rcash)│
+  │ Pod (acme)│    │ Pod (acme)│    │ Pod (acme)│
+  │ Pod (acme)│    │ Pod (acme)│    │ Pod (acme)│
   └────────────┘    └────────────┘    └────────────┘
 ```
-- Same image (`rcash-api`) runs on multiple machines ✅
+- Same image (`acme-api`) runs on multiple machines ✅
 - Each machine can run multiple Pods of the same code ✅
 - All identical copies (replicas). `replicas: 6` → Scheduler spreads them across nodes.
 - Why multiple Pods per machine? A 32GB machine running one 512MB Pod = wasted. Pack several.
@@ -617,8 +617,8 @@ Region jpw1a → ANOTHER separate cluster (Node1, Node2... all same cluster)
 
 Maps to repo deploy paths:
 ```
-roc/qa/jpe2b/00_deploy.sh   → deploys same code to jpe2b cluster
-roc/qa/jpw1a/00_deploy.sh   → deploys same code to jpw1a cluster
+icp/qa/jpe2b/00_deploy.sh   → deploys same code to jpe2b cluster
+icp/qa/jpw1a/00_deploy.sh   → deploys same code to jpw1a cluster
 ```
 
 **Full corrected picture:**
@@ -647,8 +647,8 @@ kubectl get pods -o wide
 # Adds NODE column showing which machine each Pod runs on.
 # Also shows the Pod's IP. Example output:
 # NAME            READY   STATUS    IP            NODE
-# rcash-api-abc   1/1     Running   10.244.0.5    worker-node-2
-# rcash-api-def   1/1     Running   10.244.1.7    worker-node-1
+# acme-api-abc   1/1     Running   10.244.0.5    worker-node-2
+# acme-api-def   1/1     Running   10.244.1.7    worker-node-1
 ```
 
 ```bash
@@ -709,8 +709,8 @@ kubectl config use-context <name>     # switch to a different cluster
 ### Labels — how Pods/Services/Deployments link together
 ```bash
 kubectl get pods --show-labels        # see labels on each pod
-kubectl get pods -l app=rcash-api     # filter pods by label
-# A Service finds its Pods by matching labels (selector: app=rcash-api).
+kubectl get pods -l app=acme-api     # filter pods by label
+# A Service finds its Pods by matching labels (selector: app=acme-api).
 # This is the "glue" that connects Service → Pods.
 ```
 
@@ -723,10 +723,10 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: "rcash-api"
-  name: "rcash-api"
+    app: "acme-api"
+  name: "acme-api"
   annotations:
-    wildic.cpd.rakuten.com/enable: "false"
+    wildic.cpd.acme-cloud.internal/enable: "false"
 spec:
   ports:
     - name: http
@@ -749,18 +749,18 @@ spec:
 - Core objects (Service/Pod/ConfigMap/Secret) = `v1`. Deployments = `apps/v1`.
 - Every K8s YAML starts with these two lines.
 
-**`metadata.name: "rcash-api"`**
+**`metadata.name: "acme-api"`**
 - The Service's name = its DNS name inside the cluster.
-- Other Pods reach it by typing `rcash-api` (full: `rcash-api.<namespace>.svc.cluster.local`).
+- Other Pods reach it by typing `acme-api` (full: `acme-api.<namespace>.svc.cluster.local`).
 
-**`metadata.labels: app: rcash-api`**
+**`metadata.labels: app: acme-api`**
 - Labels = tags to organize/find objects. Describes THIS Service object.
-- `kubectl get services -l app=rcash-api`
+- `kubectl get services -l app=acme-api`
 - ⚠️ Different from `selector` below! This labels the Service itself; selector picks Pods.
 
-**`metadata.annotations: wildic.cpd.rakuten.com/enable: "false"`**
+**`metadata.annotations: wildic.cpd.acme-cloud.internal/enable: "false"`**
 - Annotations = config data that TOOLS read (K8s itself ignores them).
-- This is a Rakuten-internal platform annotation.
+- This is a internal platform annotation.
 - **Labels vs Annotations:**
     - Labels = for selecting/grouping (K8s matches on them)
     - Annotations = config data for tools/platforms to read
@@ -816,7 +816,7 @@ selector: app=feature-new-login
 External traffic (via Ingress/LBaaS, defined elsewhere)
         │
         ▼
-Service "rcash-api" (ClusterIP)
+Service "acme-api" (ClusterIP)
   port 80  → targetPort 8080 (HTTP)
   port 443 → targetPort 8081 (HTTPS)
   selector: app=${BRANCH_SLUG}
@@ -843,9 +843,9 @@ services by **hostname** or **URL path**.
                     │
               ┌──────────────┐
               │   INGRESS     │
-              │ api.rcash.com   → rcash-api Service   │
-              │ admin.rcash.com → rcash-admin Service │
-              │ rcash.com/pay   → payments Service    │
+              │ api.acme.com   → acme-api Service   │
+              │ admin.acme.com → acme-admin Service │
+              │ acme.com/pay   → payments Service    │
               └──────────────┘
                  │      │       │
                Service Service Service → Pods
@@ -855,14 +855,14 @@ Like a building receptionist: everyone enters one door, gets directed to the rig
 ### Two routing styles
 **Host-based** (by domain):
 ```
-host: api.rcash.com   → rcash-api Service
-host: admin.rcash.com → rcash-admin Service
+host: api.acme.com   → acme-api Service
+host: admin.acme.com → acme-admin Service
 ```
 **Path-based** (by URL path):
 ```
-host: rcash.com
-  /api      → rcash-api Service
-  /admin    → rcash-admin Service
+host: acme.com
+  /api      → acme-api Service
+  /admin    → acme-admin Service
 ```
 
 ### Example Ingress YAML
@@ -870,23 +870,23 @@ host: rcash.com
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: rcash-ingress
+  name: acme-ingress
 spec:
   rules:
-    - host: api.rcash.com           # visit this hostname...
+    - host: api.acme.com           # visit this hostname...
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: rcash-api      # ...route to THIS Service
+                name: acme-api      # ...route to THIS Service
                 port:
                   number: 80         # the Service's port (matches Service YAML port: 80)
   tls:
     - hosts:
-        - api.rcash.com
-      secretName: rcash-tls-cert     # HTTPS cert stored in a K8s Secret
+        - api.acme.com
+      secretName: acme-tls-cert     # HTTPS cert stored in a K8s Secret
 ```
 Locks together with the Service file: `backend.service.name/port` → Service `port: 80`
 → `targetPort: 8080` → Pod → container.
@@ -901,19 +901,19 @@ Ingress YAML (instruction manual) → read by → Ingress Controller (the worker
 
 ### Where Ingress fits in the FULL flow
 ```
-User (api.rcash.com)
+User (api.acme.com)
    ▼
 GSLB (DNS)          → picks region (jpe2b)
    ▼
 LBaaS               → enters the cluster via a worker machine
    ▼
-INGRESS             → reads hostname, routes to rcash-api Service  ◄── HTTP-aware router
+INGRESS             → reads hostname, routes to acme-api Service  ◄── HTTP-aware router
    ▼
 Service (ClusterIP) → picks a healthy Pod (selector match)
    ▼
 Pod (8080)          → hands to container
    ▼
-Container           → rcash-api answers
+Container           → acme-api answers
 ```
 
 ### Comparison
@@ -930,7 +930,7 @@ move raw traffic; Ingress reads the actual web request and routes smartly.
 
 ---
 
-## Section 11 — Does rcash-api use Ingress? (repo investigation)
+## Section 11 — Does acme-api use Ingress? (repo investigation)
 
 **Answer: NO — no Kubernetes `Ingress` object is used.**
 
@@ -943,16 +943,16 @@ Searched the whole repo. Object kinds found:
 | **Ingress** | **0** |
 
 "ingress" only appears as the label value `shared-ingressgateway` — a reference to
-Rakuten's platform gateway, not a K8s Ingress object.
+the company's platform gateway, not a K8s Ingress object.
 
 ### What's used instead: a `LoadBalancer` Service ("DLB")
-File: `roc/<env>/common/caas/rcash-dlb.yaml`  (dlb = Distributed Load Balancer)
+File: `icp/<env>/common/caas/acme-dlb.yaml`  (dlb = Distributed Load Balancer)
 ```yaml
 kind: Service
 metadata:
-  name: "rcash-api-dev-${CLUSTER_PREFIX}-dlb"
+  name: "acme-api-dev-${CLUSTER_PREFIX}-dlb"
   labels:
-    network.cpd.rakuten.com/dlb-binding: shared-ingressgateway   # binds to Rakuten gateway
+    network.cpd.acme-cloud.internal/dlb-binding: shared-ingressgateway   # binds to the company's gateway
   annotations:
     service.beta.kubernetes.io/dlb-nw-type: private
     service.beta.kubernetes.io/dlb-is-global-server-group: "true"  # ← this is the GSLB hook
@@ -971,9 +971,9 @@ User
   ▼
 GSLB ◄──── annotation: dlb-is-global-server-group: "true"
   ▼
-Rakuten DLB / shared-ingressgateway ◄── label: dlb-binding: shared-ingressgateway
+the company's DLB / shared-ingressgateway ◄── label: dlb-binding: shared-ingressgateway
   ▼
-LoadBalancer Service (rcash-api-...-dlb)  port 21580 → targetPort 8080
+LoadBalancer Service (acme-api-...-dlb)  port 21580 → targetPort 8080
   ▼
 Pod (selector: app=${BRANCH_SLUG})
   ▼
@@ -983,21 +983,21 @@ Container (Payara :8080)
 ### Two Services work together
 | File | Type | Role |
 |------|------|------|
-| `rcash-api` Service | ClusterIP | Internal — in-cluster traffic |
-| `rcash-api-...-dlb` Service | LoadBalancer | External — exposes via Rakuten gateway |
+| `acme-api` Service | ClusterIP | Internal — in-cluster traffic |
+| `acme-api-...-dlb` Service | LoadBalancer | External — exposes via the company's gateway |
 
-The `-dlb` LoadBalancer Service is the **"Ingress replacement."** Rakuten's platform
+The `-dlb` LoadBalancer Service is the **"Ingress replacement."** The company's platform
 (shared-ingressgateway + DLB + GSLB) does what a vanilla K8s Ingress + Ingress Controller
 would do.
 
 ### Why no Ingress?
 Company has its own managed networking platform ("CPD" = Cloud Platform Dept, from
-`cpd.rakuten.com`). Instead of deploying your own NGINX Ingress Controller, you bind to
-Rakuten's shared gateway via annotations on a LoadBalancer Service. Same concept as Ingress,
+`cpd.acme-cloud.internal`). Instead of deploying your own NGINX Ingress Controller, you bind to
+the company's shared gateway via annotations on a LoadBalancer Service. Same concept as Ingress,
 different implementation — managed by the platform team.
 
 > Takeaway: Ingress is the vanilla-Kubernetes way. Managed platforms (cloud providers,
-> Rakuten CPD) often expose apps via annotated LoadBalancer Services instead. Learn both —
+> the company's internal platform (CPD)) often expose apps via annotated LoadBalancer Services instead. Learn both —
 > the CONCEPT (route external traffic to internal Services) is identical.
 
 ---

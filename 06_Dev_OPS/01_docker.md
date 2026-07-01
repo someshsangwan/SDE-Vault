@@ -1,6 +1,6 @@
 # Chapter 1 — Containers with Docker (My Notes)
 
-> Reference repo: `/Users/somesh.sangwan/Desktop/rcash_api-roc` (Payara/Java backend, real Dockerfile)
+> Reference repo: `/Users/youruser/Desktop/acme-api-infra` (Payara/Java backend, real Dockerfile)
 > My environment: macOS (Apple Silicon, arm64), Docker 28.1.1, daemon running.
 
 ---
@@ -91,7 +91,7 @@ docker CLI  ──(REST API)──►  dockerd (daemon)  ──►  Registry (Do
 - **CLI** — just a client, talks to the daemon over a socket.
 - **Daemon (`dockerd`)** — manages images, containers, networks, volumes.
 - **Registry** — storage for images. Docker Hub = public. Your office uses **Harbor**:
-  `registry-jpe2.r-local.net` (seen on line 1 of `rcash_api-roc/Dockerfile`).
+  `registry-jpe2.acme-registry.internal` (seen on line 1 of `acme-api-infra/Dockerfile`).
 
 ---
 
@@ -263,7 +263,7 @@ docker run -it --rm -v mydata:/data alpine sh
 ```
 
 ### Connects to office work
-`rcash_api-roc/Dockerfile` creates log dirs (`${RCASH_LOGS_DIR}/rcash_api`).
+`acme-api-infra/Dockerfile` creates log dirs (`${ACME_LOGS_DIR}/acme_api`).
 In production those dirs are mounted as volumes so:
 - Logs survive container restarts / redeployments
 - Log collectors (New Relic, ELK) can read them from the host
@@ -302,9 +302,9 @@ docker rm -f app-a app-b && docker network rm my-network
 
 ### Real world pattern — API + Database
 ```
-Docker Network: "rcash-network"
+Docker Network: "acme-network"
   ┌──────────────────┐       ┌──────────────┐
-  │   rcash-api       │──────►│   mariadb     │
+  │   acme-api       │──────►│   mariadb     │
   │   port 8080       │       │   port 3306   │
   └──────────────────┘       └──────────────┘
           │
@@ -333,7 +333,7 @@ docker network rm my-network              # delete
 
 ### Connects to office work
 - `docker compose up -d` (from README) auto-creates a shared network for all services.
-  That's how `rcash-api` reaches `mariadb` — same compose file = same network = name-based DNS.
+  That's how `acme-api` reaches `mariadb` — same compose file = same network = name-based DNS.
 - In Kubernetes (Chapter 2), the same concept is called a **Service** — same idea, different name.
 
 ---
@@ -356,12 +356,12 @@ services:
     image: mariadb:10.6
     environment:
       MYSQL_ROOT_PASSWORD: secret
-      MYSQL_DATABASE: rcash
+      MYSQL_DATABASE: acme
     volumes:
       - db-data:/var/lib/mysql      # persistent data
 
-  rcash-api:
-    image: rcash-api:latest
+  acme-api:
+    image: acme-api:latest
     ports:
       - "8080:8080"                 # same as -p
     depends_on:
@@ -397,7 +397,7 @@ api:
 ```
 
 ### Connects to office work
-- `docker compose up -d` in `rcash_api-roc` README starts API + MariaDB + all services
+- `docker compose up -d` in `acme-api-infra` README starts API + MariaDB + all services
   with one command — identical environment for every developer.
 - CI pipeline (`.gitlab-ci.yml`) runs on `docker` tagged runners — services like DB
   are spun up as compose services during test stages.
@@ -406,15 +406,15 @@ api:
 
 ---
 
-## Section 9 — rcash_api-roc Dockerfile deep-dive (real production code)
+## Section 9 — acme-api-infra Dockerfile deep-dive (real production code)
 
-> File: `/Users/somesh.sangwan/Desktop/rcash_api-roc/Dockerfile`
+> File: `/Users/youruser/Desktop/acme-api-infra/Dockerfile`
 
 ### Layer-by-layer breakdown
 
 **Block 1 — Base image**
 ```dockerfile
-FROM registry-jpe2.r-local.net/rcash-dev-qa/payara/micro:5.2022.3-jdk11
+FROM registry-jpe2.acme-registry.internal/acme-dev-qa/payara/micro:5.2022.3-jdk11
 ```
 - Pulls from your office **Harbor private registry** (not Docker Hub)
 - Payara Micro = lightweight Java app server that runs `.war` files
@@ -422,11 +422,11 @@ FROM registry-jpe2.r-local.net/rcash-dev-qa/payara/micro:5.2022.3-jdk11
 
 **Block 2 — Build-time variables**
 ```dockerfile
-ARG module="RCashAPI-BusinessLogic-1.0-SNAPSHOT"
-ARG service=rcash-api
+ARG module="AcmeAPI-BusinessLogic-1.0-SNAPSHOT"
+ARG service=acme-api
 ```
 - `ARG` = build-time parameters (like function arguments for the Dockerfile)
-- Override at build time: `docker build --build-arg service=rcash-api-v2 .`
+- Override at build time: `docker build --build-arg service=acme-api-v2 .`
 
 **Block 3 — System packages + timezone**
 ```dockerfile
@@ -441,8 +441,8 @@ ENV TZ Asia/Tokyo
 
 **Block 4 — App environment variables**
 ```dockerfile
-ENV RCASH_SERVICE_NAME=${service}         # = "rcash-api"
-ENV RCASH_LOGS_DIR="${HOME_DIR}/logs"
+ENV ACME_SERVICE_NAME=${service}         # = "acme-api"
+ENV ACME_LOGS_DIR="${HOME_DIR}/logs"
 ENV MEM_MAX_RAM_PERCENTAGE=50             # JVM uses max 50% of container memory limit
 ```
 - `MEM_MAX_RAM_PERCENTAGE=50` works with Kubernetes memory limits (Chapter 2) to
@@ -451,7 +451,7 @@ ENV MEM_MAX_RAM_PERCENTAGE=50             # JVM uses max 50% of container memory
 **Block 5 — User switch + directory creation**
 ```dockerfile
 USER payara
-RUN mkdir ${HOME_DIR}/setup && mkdir ${RCASH_LOGS_DIR}/rcash_api ...
+RUN mkdir ${HOME_DIR}/setup && mkdir ${ACME_LOGS_DIR}/acme_api ...
 ```
 - Switch from `root` to `payara` — security best practice (least privilege)
 - Creates log and config directories. These are mounted as volumes in production
@@ -467,7 +467,7 @@ RUN wget .../newrelic-java-8.2.0.zip && unzip ...
 
 **Block 7 — Copy build artifacts**
 ```dockerfile
-COPY --chown=payara:payara ./roc/build/docker ${HOME_DIR}/setup
+COPY --chown=payara:payara ./icp/build/docker ${HOME_DIR}/setup
 ```
 - Copies compiled configs and scripts from your Mac (or CI runner) into the image
 - `--chown=payara:payara` — files owned by payara user, not root
@@ -483,14 +483,14 @@ RUN java -jar payara-micro.jar --outputlauncher ...
 
 **Block 9 — Logging config**
 ```dockerfile
-RUN sed -i "s/\${RCASH_LOGS_DIR}/.../" custom_logging.properties ...
+RUN sed -i "s/\${ACME_LOGS_DIR}/.../" custom_logging.properties ...
 ```
 - Replaces placeholder variables in config files with real paths/names
 - Done at build time (paths are known) → faster container startup
 
 **Block 10 — Deploy the WAR (YOUR CODE)**
 ```dockerfile
-COPY --chown=payara:payara rcash_api/.../target/${module}.war ${DEPLOY_DIR}/${service}.war
+COPY --chown=payara:payara acme_api/.../target/${module}.war ${DEPLOY_DIR}/${service}.war
 ```
 - This is your actual Java application entering the image
 - `.war` dropped into Payara's deploy dir → auto-deployed on startup
@@ -512,7 +512,7 @@ Layer 2-5 packages + ENV           ← rarely changes → cached
 Layer 6   New Relic download        ← heavy, rarely changes → cached
 Layer 7-9 COPY configs + pre-warm  ← changes on Payara upgrades → cached
 Layer 10  logging config            ← changes on config updates → cached
-Layer 11  COPY rcash_api.war       ← YOUR CODE, changes every commit → bottom
+Layer 11  COPY acme_api.war       ← YOUR CODE, changes every commit → bottom
 Layer 12  CMD + USER               ← never changes
 ```
 Only Layer 11 rebuilds on every commit. Layers 1-10 are cache hits = fast CI builds.

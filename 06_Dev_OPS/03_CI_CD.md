@@ -1,7 +1,7 @@
 # Chapter 3 — CI/CD Pipelines (My Notes)
 
-> Reference repo: `/Users/somesh.sangwan/Desktop/rcash_api-roc`
-> Real file taught: `roc/gitlab/.gitlab-rcash-dev.yaml` + `.gitlab-api-validation.yaml`
+> Reference repo: `/Users/youruser/Desktop/acme-api-infra`
+> Real file taught: `icp/gitlab/.gitlab-acme-dev.yaml` + `.gitlab-api-validation.yaml`
 
 ---
 
@@ -64,75 +64,75 @@ PIPELINE (whole process for one push)
 
 ---
 
-## Section 3 — Real dev pipeline line-by-line (.gitlab-rcash-dev.yaml)
+## Section 3 — Real dev pipeline line-by-line (.gitlab-acme-dev.yaml)
 
 ### Reusable rules template
 ```yaml
-.rcash:dev:rules:                          # leading DOT = hidden template job (reused via extends)
+.acme:dev:rules:                          # leading DOT = hidden template job (reused via extends)
   rules:
     - if: '$CI_COMMIT_BRANCH =~ /^(dev)\/.*$/'  # only runs on branches like dev/xxx (=~ is regex)
       when: manual                              # won't auto-run — someone clicks "play" (safety gate)
   variables:
     VERSION: $CI_COMMIT_SHORT_SHA            # built-in var = short git commit hash
-    TENANT_NAMESPACE: rcash-dev-dev
+    TENANT_NAMESPACE: acme-dev-dev
 ```
 
 ### STAGE: fetch — get source code
 ```yaml
-rcash:fetch:dev:
-  extends: .rcash:dev:rules                 # inherit the template (manual, dev-branch-only)
+acme:fetch:dev:
+  extends: .acme:dev:rules                 # inherit the template (manual, dev-branch-only)
   stage: fetch
   image: gitlab/gitlab-ee:latest            # container this job runs in
   before_script:                            # setup: write SSH key to clone private repo
-    - cat $ID_RCASH_API_KEY > ~/id_rcash_api_key   # $ID_RCASH_API_KEY = GitLab CI secret
-    - chmod 600 ~/id_rcash_api_key          # SSH requires private key perms
+    - cat $ID_ACME_API_KEY > ~/id_acme_api_key   # $ID_ACME_API_KEY = GitLab CI secret
+    - chmod 600 ~/id_acme_api_key          # SSH requires private key perms
   script:
-    - sh roc/build/90_build_ci.sh update_submodule   # fetch source (git submodule)
+    - sh icp/build/90_build_ci.sh update_submodule   # fetch source (git submodule)
   artifacts:
-    paths: [ rcash_api/ ]                   # save folder → next stage can use it
+    paths: [ acme_api/ ]                   # save folder → next stage can use it
     expire_in: 1 days                       # auto-delete after a day
 ```
 > This automates the SSH-key + submodule steps the README described doing by hand.
 
 ### STAGE: build — compile the .war
 ```yaml
-rcash:build:dev:
+acme:build:dev:
   stage: build
   image: maven:3.6.3-jdk-11                 # Maven + Java 11 image (tools to compile Java)
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths: [ .m2/repository ]               # cache Maven deps for speed
   script:
-    - sh roc/build/90_build_ci.sh build_war # compile → produces .war
+    - sh icp/build/90_build_ci.sh build_war # compile → produces .war
   artifacts:
-    paths: [ "*.war", "roc/build/docker/lib/*" ]   # save .war for docker stage
-  needs: ["rcash:fetch:dev"]                # runs after fetch, pulls its artifacts
+    paths: [ "*.war", "icp/build/docker/lib/*" ]   # save .war for docker stage
+  needs: ["acme:fetch:dev"]                # runs after fetch, pulls its artifacts
 ```
 
 ### STAGE: docker — build image (TWICE, parallel: jpe + jpw)
 ```yaml
-rcash:docker:jpe:dev:
+acme:docker:jpe:dev:
   stage: docker
   image: gcr.io/kaniko-project/executor:v1.5.2-debug   # Kaniko = build images w/o Docker daemon (secure)
   before_script:
-    - mv *.war rcash_api/RCashAPI-BusinessLogic/target  # put .war where Dockerfile COPY expects it
+    - mv *.war acme_api/AcmeAPI-BusinessLogic/target  # put .war where Dockerfile COPY expects it
   script:
-    - sh roc/build/90_build_ci.sh build_kaniko_jpe      # build image + push to jpe2b Harbor
-  needs: ["rcash:fetch:dev", "rcash:build:dev"]
+    - sh icp/build/90_build_ci.sh build_kaniko_jpe      # build image + push to jpe2b Harbor
+  needs: ["acme:fetch:dev", "acme:build:dev"]
 ```
 - Kaniko runs your Chapter-1 Dockerfile. Two jobs (jpe/jpw) → one image per datacenter registry.
 
 ### STAGE: deploy — kubectl apply (TWICE, parallel: jpe + jpw)
 ```yaml
-rcash:deploy:jpe:dev:
+acme:deploy:jpe:dev:
   stage: deploy
   image: ${KUBECTL_IMAGE}                   # the kubectl container
   script:
-    - bash roc/dev/common/00_deploy_ci.sh deploy   # runs kubectl apply (CI version of 00_deploy.sh)
+    - bash icp/dev/common/00_deploy_ci.sh deploy   # runs kubectl apply (CI version of 00_deploy.sh)
   environment:
-    name: rcash-api-dev-jpe2b               # GitLab tracks deploy history per environment
+    name: acme-api-dev-jpe2b               # GitLab tracks deploy history per environment
   variables:
-    BRANCH_SLUG: rcash-api-dev-jpe2b-${APP_VERSION}  # ← fills selector in Service YAML!
+    BRANCH_SLUG: acme-api-dev-jpe2b-${APP_VERSION}  # ← fills selector in Service YAML!
     CAAS_CLUSTER: jpe2-caas1-dev1           # which cluster to deploy to
     CLUSTER_PREFIX: jpe2b                   # ← fills ${CLUSTER_PREFIX} in DLB Service YAML
 ```
@@ -145,11 +145,11 @@ rcash:deploy:jpe:dev:
 ## Section 4 — Full picture of the dev pipeline
 ```
 Push to dev/* branch → click "play" (manual)
-  STAGE fetch:   rcash:fetch:dev   (gitlab-ee)  → SSH clone source → artifact rcash_api/
-  STAGE build:   rcash:build:dev   (maven)      → mvn compile → artifact *.war
+  STAGE fetch:   acme:fetch:dev   (gitlab-ee)  → SSH clone source → artifact acme_api/
+  STAGE build:   acme:build:dev   (maven)      → mvn compile → artifact *.war
   STAGE docker:  jpe + jpw (Kaniko, PARALLEL)   → build image, push to each datacenter Harbor
   STAGE deploy:  jpe + jpw (kubectl, PARALLEL)  → kubectl apply to each cluster
-→ rcash-api running in BOTH datacenters, fully automated
+→ acme-api running in BOTH datacenters, fully automated
 ```
 
 Connections to earlier chapters:

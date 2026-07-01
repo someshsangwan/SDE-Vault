@@ -1,7 +1,7 @@
 # Chapter 5 — Monitoring, Logging & Observability (My Notes)
 
-> Reference repo: `/Users/somesh.sangwan/Desktop/rcash_api-roc`
-> Real files taught: `roc/prod/common/caas/filebeat.yaml`, `roc/build/docker/custom_logging.properties`
+> Reference repo: `/Users/youruser/Desktop/acme-api-infra`
+> Real files taught: `icp/prod/common/caas/filebeat.yaml`, `icp/build/docker/custom_logging.properties`
 > Your repo uses the FULL observability stack: New Relic (APM) + Filebeat + Logstash (logs).
 
 ---
@@ -55,7 +55,7 @@ Dockerfile Block 6 (Ch.1) downloaded the New Relic Java agent. APM = Application
 
 ```
 Pod → JVM (Payara)
-        rcash-api code  ◄── New Relic agent (attaches INSIDE the JVM)
+        acme-api code  ◄── New Relic agent (attaches INSIDE the JVM)
                               │ sends data
                               ▼
                         New Relic Cloud (SaaS): 📊 dashboards 🔍 traces 🚨 alerts
@@ -118,11 +118,11 @@ output.logstash:
   ssl.certificate_authorities: /config/filebeat/root-ca.crt  # encrypted
 ```
 
-> FULL CIRCLE: `.gitlab-rcash-dev.yaml` deploy job set:
+> FULL CIRCLE: `.gitlab-acme-dev.yaml` deploy job set:
 >   EAAS_HOSTS: '[...logstash-gw101...:6227, ...]'
 >   EAAS_SECRET: $STG_JPE_EAAS_SECRET
 > These inject right here into Filebeat output. EAAS = Elasticsearch as a Service
-> (Rakuten managed ELK). CI pipeline (Ch.3) wires logging to the central platform.
+> (company-managed ELK). CI pipeline (Ch.3) wires logging to the central platform.
 
 ### custom_logging.properties (the file Dockerfile's sed edited in Ch.1!)
 ```properties
@@ -130,21 +130,21 @@ handlers=...ConsoleHandler,...FileHandler
 FileHandler.limit=10485760       # rotate at 10MB
 FileHandler.count=10             # keep 10 rotated files
 FileHandler.formatter=co.elastic.logging.jul.EcsFormatter   # structured JSON logs!
-FileHandler.pattern=${RCASH_LOGS_DIR}/server.log
-EcsFormatter.serviceName=${RCASH_SERVICE_NAME}
+FileHandler.pattern=${ACME_LOGS_DIR}/server.log
+EcsFormatter.serviceName=${ACME_SERVICE_NAME}
 ```
 - `EcsFormatter` = Elastic Common Schema → writes logs as structured JSON (so ES indexes
   every field). That's why a filebeat input had `tags: ["json"]`.
 - `limit + count` = log rotation (prevents filling the disk).
-- `${RCASH_LOGS_DIR}` / `${RCASH_SERVICE_NAME}` = the exact placeholders Dockerfile `sed`
+- `${ACME_LOGS_DIR}` / `${ACME_SERVICE_NAME}` = the exact placeholders Dockerfile `sed`
   replaced in Ch.1 Block 9 → so logs are tagged with service name + written to the volume Filebeat reads.
 
 ---
 
-## Section 6 — Complete observability picture for rcash-api
+## Section 6 — Complete observability picture for acme-api
 ```
-rcash-api Pod
-  JVM (Payara) + rcash-api code
+acme-api Pod
+  JVM (Payara) + acme-api code
      │  └─ New Relic agent ──► New Relic Cloud (METRICS + TRACES) 📊🔍🚨
      │
      └─ writes logs → /opt/payara/logs/*.log (volume)
@@ -177,7 +177,7 @@ METRICS + TRACES → New Relic   |   LOGS → Filebeat → Logstash → Elastics
 
 ### Q: We use Prometheus+Grafana (CPU/mem), New Relic (transactions/QPS), PagerDuty. Where is the config? How are they connected?
 
-**KEY INSIGHT: monitoring config lives in TWO places. Most is NOT in rcash_api-roc.**
+**KEY INSIGHT: monitoring config lives in TWO places. Most is NOT in acme-api-infra.**
 
 | Category | What | Where |
 |----------|------|-------|
@@ -185,7 +185,7 @@ METRICS + TRACES → New Relic   |   LOGS → Filebeat → Logstash → Elastics
 | "Backend/dashboard" side | Grafana dashboards, Prometheus scrape rules, alert thresholds, PagerDuty routing | ❌ Platform team / web UIs |
 
 #### 1. New Relic — configured HERE (the Ch.1 missing link!)
-`roc/prod/common/caas/rcash-deployment.yaml` JVM_ARGS (line ~100) turns the agent ON:
+`icp/prod/common/caas/acme-deployment.yaml` JVM_ARGS (line ~100) turns the agent ON:
 ```yaml
 - name: JVM_ARGS
   value: "... -javaagent:/opt/payara/newrelic/newrelic.jar
@@ -194,7 +194,7 @@ METRICS + TRACES → New Relic   |   LOGS → Filebeat → Logstash → Elastics
 ```
 - Dockerfile (Ch.1) DOWNLOADED newrelic.jar. THIS file SWITCHES IT ON via `-javaagent:`.
 - `app_name` = name shown in New Relic dashboard.
-- `license_key` = connects to company's New Relic account (from rcash-api-secrets).
+- `license_key` = connects to company's New Relic account (from acme-api-secrets).
 - Your transactions / QPS / response times come from THIS agent.
 - `acl-newrelic.yaml` = NetworkPolicy/firewall letting Pod reach New Relic servers.
 - Dashboards & alert rules you VIEW = configured in New Relic web UI (not any repo).
@@ -235,9 +235,9 @@ Prometheus/New Relic (metric crosses threshold)
 
 #### Where config lives (direct answer)
 ```
-IN THIS REPO (rcash_api-roc)              NOT IN REPO (elsewhere)
+IN THIS REPO (acme-api-infra)              NOT IN REPO (elsewhere)
 • New Relic agent ON + app name           • Grafana dashboards (Grafana UI)
-  (rcash-deployment.yaml JVM_ARGS)        • Prometheus scrape config (CPD team)
+  (acme-deployment.yaml JVM_ARGS)        • Prometheus scrape config (CPD team)
 • New Relic license key ref (secrets)     • Alert thresholds (New Relic UI / Alertmgr)
 • Resource limits (6Gi ceiling)           • PagerDuty keys/schedules/escalation (PD UI)
 • Log shipping (filebeat.yaml)            • New Relic dashboards (NR UI)
@@ -256,7 +256,7 @@ Prometheus Alertmanager rules. Ask team lead which CPD repo holds Alertmanager c
 
 # 🎓 CAPSTONE — The Complete DevOps Picture (all 5 chapters)
 
-Everything you learned, as ONE flow for rcash-api:
+Everything you learned, as ONE flow for acme-api:
 
 ```
 1. CODE         Developer writes Java code, pushes to dev/* branch
@@ -270,7 +270,7 @@ Everything you learned, as ONE flow for rcash-api:
                       │
 4. K8s (Ch.2)   Deployment runs N replica Pods across nodes in each cluster
                   Service (ClusterIP) routes to healthy Pods by label (BRANCH_SLUG)
-                  DLB Service (LoadBalancer) exposes externally via Rakuten gateway
+                  DLB Service (LoadBalancer) exposes externally via the company's gateway
                       │
 5. CLOUD/IaC(Ch4) GSLB JSON routes users to jpe2b/jpw1a (failover by health check)
                   LBaaS spreads traffic to worker nodes

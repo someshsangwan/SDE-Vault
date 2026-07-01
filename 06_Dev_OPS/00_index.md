@@ -7,8 +7,8 @@ Docker, but wants to understand **how things actually work under the hood** — 
 Each chapter follows the same rhythm:
 **History / Why it exists → How it works → Core concepts (docs-level) → Hands-on practical → Notes.**
 
-> 🔗 **Real-world reference repo:** `/Users/somesh.sangwan/Desktop/rcash_api-roc`
-> This is a production Java/Payara backend deployed on Rakuten "One Cloud". It already contains a
+> 🔗 **Real-world reference repo:** `/Users/youruser/Desktop/acme-api-infra`
+> This is a production Java/Payara backend deployed on the company's internal cloud platform. It already contains a
 > `Dockerfile`, a GitLab CI pipeline (`.gitlab-ci.yml`), Kubernetes (CaaS), load balancers (LBaaS),
 > GSLB, DBaaS, and New Relic monitoring — so we connect every chapter to code you actually work with.
 
@@ -23,7 +23,7 @@ Each chapter follows the same rhythm:
 - Images vs containers, Dockerfile, layers & build cache, volumes, port mapping
 - Docker networking, multi-container apps with `docker-compose`, registries (Docker Hub / Harbor)
 - **Hands-on:** install & run Docker locally, build an image from scratch, run/inspect/debug containers
-- 🔗 *Connect to work:* read & understand the real `rcash_api-roc/Dockerfile` (Payara base image, New Relic, custom logging, WAR deploy)
+- 🔗 *Connect to work:* read & understand the real `acme-api-infra/Dockerfile` (Payara base image, New Relic, custom logging, WAR deploy)
 
 ### Chapter 2 — Orchestration with Kubernetes
 **Running containers at scale, the right way.**
@@ -32,7 +32,7 @@ Each chapter follows the same rhythm:
 - Core objects: Pods, ReplicaSets, Deployments, Services, Namespaces
 - Config & runtime: ConfigMaps, Secrets, Ingress, volumes, scaling, health checks, rolling updates
 - **Hands-on:** run a local cluster (minikube/kind), deploy an app with `kubectl`, scale & update it
-- 🔗 *Connect to work:* the repo's **CaaS (Kubernetes clusters)** + `kubectl`-based deploy scripts under `roc/`
+- 🔗 *Connect to work:* the repo's **CaaS (Kubernetes clusters)** + `kubectl`-based deploy scripts under `icp/`
 
 ### Chapter 3 — CI/CD Pipelines
 **Automating build → test → deploy.**
@@ -63,7 +63,7 @@ Each chapter follows the same rhythm:
 - We go **one chapter at a time, in the terminal**. Say *"teach me Chapter 1"* and we begin.
 - As we go, I'll create **notes files** in this `devops/` directory (e.g. `chapter-01-docker.md`)
   so you build a personal reference you can revisit.
-- We continually tie concepts back to the `rcash_api-roc` repo so theory sticks to real work.
+- We continually tie concepts back to the `acme-api-infra` repo so theory sticks to real work.
 
 ## Progress Tracker
 - [x] Chapter 1 — Containers with Docker

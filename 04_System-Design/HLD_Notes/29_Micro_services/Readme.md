@@ -9,7 +9,7 @@ A microservices architecture is a design pattern in which a single application i
 * **[Part 2: Service Mesh and its Architecture | How Microservices Communicate?](./02_Service_Mesh_and_its_Architecture.md)**
 * **[Part 3: Service Discovery in Microservices](./03_Service_Discovery.md)**
 * **[Part 4: Synchronous vs. Asynchronous Communication](./04_Sync_vs_Async_Communication.md)**
-* **[Part 5: Monolith vs. Microservices & Decomposition Patterns](./05_Data_Management_and_Saga_Pattern.md)**
+* **[Part 5: Monolith vs. Microservices & Decomposition Patterns](./05_Monolith_vs_Microservices_and_Decomposition_Patterns.md)**
 * **[Part 6: Strangler Pattern, Saga Pattern & CQRS](./06_Strangler_Saga_and_CQRS.md)**
 * *(More parts to be added later)*
 

@@ -196,8 +196,62 @@ flowchart LR
 | Best for | banking, structured relational data | huge scale, flexible/evolving data |
 | Examples | MySQL, PostgreSQL | MongoDB, Cassandra, DynamoDB, Redis |
 
-- **ACID** = Atomicity, Consistency, Isolation, Durability. **Critical for fintech** — you can't half-complete a money transfer.
+- **ACID** = Atomicity, Consistency, Isolation, Durability → full deep-dive right below (10b).
 - **Decision rule:** need structure + strong consistency → **SQL**. Need scale + flexible schema → **NoSQL**. Many apps use **both**.
+
+## 10b. ACID Properties — deep dive 🏦
+> The 4 promises a transactional database makes. **Critical for fintech** — you can't half-complete a money transfer. Run through them with one example: **transfer ¥10,000 from A to B** (two steps: `A −10,000`, `B +10,000`).
+
+### A — Atomicity: "all or nothing"
+All steps of a transaction succeed, or **none** do. There is no half-done state.
+
+```mermaid
+flowchart LR
+    T["BEGIN transaction<br/>1. A −10,000<br/>2. B +10,000"] --> Q{"both steps OK?"}
+    Q -->|yes| CO["COMMIT ✅<br/>both changes saved"]
+    Q -->|"no (crash / error<br/>after step 1)"| RB["ROLLBACK ↩️<br/>A gets the money back —<br/>as if nothing happened"]
+```
+
+- Without it: server crashes after debiting A but before crediting B → **¥10,000 vanishes**.
+- How the DB does it: writes go to a **log first**; on failure it rolls back using the log.
+- In Spring Boot: `@Transactional` — any exception inside → automatic rollback.
+
+### C — Consistency: "rules are never broken"
+Every transaction moves the DB from one **valid state** to another. All constraints hold: `balance >= 0`, foreign keys, unique keys, "total money before = total money after".
+
+- Example: if A has only ¥5,000, the ¥10,000 transfer must be **rejected** — the DB never enters an invalid state.
+- ⚠️ Don't confuse with CAP's "C": **ACID-C** = data obeys the rules; **CAP-C** = every replica sees the latest write. Same word, different meaning — say this in the interview.
+
+### I — Isolation: "transactions don't see each other's half-work"
+Concurrent transactions behave **as if they ran one by one**. While the transfer is mid-flight, no other query sees "A already debited but B not yet credited".
+
+**Without isolation, three classic bugs (know the names):**
+
+| Bug | What happens |
+|---|---|
+| **Dirty read** | you read another transaction's **uncommitted** change (which may roll back!) |
+| **Non-repeatable read** | you read the same row twice inside one transaction → different value |
+| **Phantom read** | you run the same query twice → new rows appeared |
+
+**Isolation levels** (weakest → strongest; each fixes one more bug, at the cost of speed):
+
+| Level | Dirty read | Non-repeatable | Phantom |
+|---|---|---|---|
+| Read Uncommitted | ❌ possible | ❌ | ❌ |
+| **Read Committed** (Postgres default) | ✅ blocked | ❌ | ❌ |
+| **Repeatable Read** (MySQL default) | ✅ | ✅ blocked | ❌ (mostly ✅ in MySQL) |
+| Serializable | ✅ | ✅ | ✅ blocked (slowest) |
+
+- **Fintech instinct:** for the money row itself, don't rely on level alone — take an explicit lock: `SELECT ... FOR UPDATE` (see the wallet hold in [[PayPay_Securities_Design_HLD_LLD]]).
+
+### D — Durability: "committed = survives anything"
+Once the DB says COMMIT ✅, the data is safe **even if the power dies one millisecond later**.
+
+- How: **WAL (Write-Ahead Log)** — the change is written to disk in a log *before* the commit is acknowledged; after a crash, the DB replays the log.
+- This is why the user can be shown "transfer complete" — that promise can never be un-happened.
+
+### One-liner to say in the interview
+> *"Atomicity = all-or-nothing. Consistency = rules never broken. Isolation = concurrent transactions act as if sequential. Durability = commit survives a crash. For money I need all four — that's why the wallet/order path lives in an RDBMS, not in a cache or an eventually-consistent store."*
 
 ## 11 (scaling intro). Vertical Scaling ("Scaling Up")
 > Make **one machine** more powerful: add CPU / RAM / storage.
@@ -251,6 +305,77 @@ flowchart LR
 - An index stores **column values + pointers** to the actual rows.
 - Index columns that are **frequently queried**: primary keys, foreign keys, WHERE-clause columns.
 - ⚠️ **Trade-off:** speeds up **reads**, slows down **writes** (index must update on every change) and uses storage. → Only index hot columns.
+
+## 14b. Database Indexing — deep dive 🔍
+> "How does an index actually work?" is a guaranteed follow-up. Here is the full story, bottom-up.
+
+### First: why is a full table scan slow? Disk pages.
+A database does not read rows one by one — it reads **pages** (fixed blocks, e.g. **16 KB in MySQL InnoDB**). A 100M-row table = millions of pages. No index → the DB must load **every page from disk** and check every row. Disk I/O is the cost — the whole game of indexing is: **touch as few pages as possible.**
+
+### The structure: B+ tree (not a binary tree!)
+An index is a separate, **always-sorted** structure — almost always a **B+ tree**:
+
+```mermaid
+flowchart TB
+    R["ROOT<br/>[ 40 | 80 ]"] -->|"< 40"| I1["[ 10 | 25 ]"]
+    R -->|"40–80"| I2["[ 55 | 70 ]"]
+    R -->|"> 80"| I3["[ 90 | 95 ]"]
+    I2 --> L1["LEAF: 40,45,52<br/>→ row pointers"]
+    I2 --> L2["LEAF: 55,61,68<br/>→ row pointers"]
+    I2 --> L3["LEAF: 70,74,79<br/>→ row pointers"]
+    L1 <-.->|"linked list →"| L2 <-.->|"→"| L3
+    style I2 fill:#2b6cb0,color:#fff
+    style L2 fill:#2b6cb0,color:#fff
+```
+
+Looking for `55`: root → middle node → leaf. **3 page reads instead of millions.**
+
+Why this shape (say these — this is the real "how it works"):
+1. **Each node = one disk page** and holds **hundreds of keys** (high fan-out), not 2 like a binary tree. So the tree is very **flat**: 3–4 levels can index **billions of rows** → any lookup = 3–4 page reads, O(log n).
+2. **All values live in the leaves**, and leaves are connected as a **sorted linked list** → **range queries are cheap**: find the start, then just walk right. `WHERE created_at BETWEEN x AND y` = one descent + a walk.
+3. The tree **self-balances** on insert/delete (nodes split/merge) — it never degrades into a long chain.
+
+- **B+ tree vs hash index:** a hash index is O(1) but for `=` only — a hash destroys order, so no ranges, no sorting, no prefix search. That's why B+ tree is the default everywhere (Redis-style KV stores and MySQL `MEMORY` tables use hashes).
+
+### Clustered vs secondary index (the InnoDB question)
+- **Clustered index** = the table **itself** is stored as a B+ tree, sorted by **primary key**; leaves contain the **full rows**. One per table — the data can only be physically sorted one way.
+- **Secondary index** (any other index you create) = its own B+ tree; leaves contain the indexed value + the **primary key** of the row.
+- ⚠️ So a secondary-index lookup is **two steps**: search the secondary tree → get the PK → search the clustered tree for the full row (a "back-to-the-table" lookup). This is why fat random secondary lookups can be slower than you expect.
+
+```mermaid
+flowchart LR
+    Q["WHERE user_id = 42"] --> S["secondary index<br/>(user_id → PK)"] -->|"PK = 9001"| C["clustered index<br/>(PK → full row)"] --> ROW["row ✅"]
+```
+
+### Composite index & the leftmost-prefix rule
+`INDEX (user_id, created_at)` = sorted by `user_id` first, then `created_at` inside each user (like a phone book: last name, then first name).
+
+- ✅ Works for: `WHERE user_id = 42` · `WHERE user_id = 42 AND created_at > x` · `WHERE user_id = 42 ORDER BY created_at DESC`
+- ❌ Useless for: `WHERE created_at > x` alone — you can't use a phone book to search by first name only.
+- **Rule:** the index helps only if the query uses a **leftmost prefix** of its columns. Order the columns: equality-filter columns first, then the range/sort column.
+- Broker example: `orders(user_id, created_at)` → "last 30 orders of user 42" = one descent + read 30 leaf entries. Perfect.
+
+### Covering index — the query never touches the table
+If the index contains **every column the query needs**, the DB answers from the index alone (no back-to-the-table step). `EXPLAIN` shows `Using index`.
+
+- `INDEX (user_id, status)` fully answers `SELECT status FROM orders WHERE user_id = 42` → the fastest read there is.
+
+### Why writes get slower (the price you pay)
+Every `INSERT`/`UPDATE`/`DELETE` must also update **every index** on the table: descend each tree, insert in sorted position, sometimes **split pages**. 5 indexes = ~6 writes per row write. This is why:
+- Write-heavy tables keep indexes minimal.
+- An append-only ledger with few indexes stays fast (→ [[PayPay_Securities_Design_HLD_LLD]]).
+
+### When the index is NOT used (classic traps 🪤)
+1. **Function on the column:** `WHERE YEAR(created_at) = 2026` ❌ — the index stores raw values, not function results. Rewrite as a range: `created_at >= '2026-01-01' AND < '2027-01-01'` ✅.
+2. **Leading wildcard:** `LIKE '%pay'` ❌ (sorted order can't help you find endings). `LIKE 'pay%'` ✅ is a prefix = a range.
+3. **Type mismatch:** `WHERE phone = 12345` on a `VARCHAR` column → implicit cast on every row ❌.
+4. **Low selectivity:** indexing `gender` (2 values) is pointless — the DB would still touch half the table, so the optimizer just scans.
+5. **Not the leftmost prefix** of a composite index (above).
+
+**Verify, don't guess:** run `EXPLAIN <query>` — it shows whether the index is used (`ref`/`range` good, `ALL` = full scan) and how many rows are examined.
+
+### One-liner to say in the interview
+> *"An index is a B+ tree: a flat, sorted tree where each node is one disk page holding hundreds of keys, so any lookup is 3–4 page reads instead of a full scan; leaves are a linked list, so ranges are cheap. The cost: every write must maintain every index — so I index exactly the columns my hot queries filter and sort on, composite in leftmost-prefix order, and check with EXPLAIN."*
 
 ## 15. Replication
 > Keep **copies** of the DB across servers to scale **reads** and improve availability.
@@ -776,11 +901,13 @@ One `TradeExecuted` event → four consumers, each independent, each replayable.
 | 8 | REST | stateless, resources, HTTP verbs | simple CRUD |
 | 9 | GraphQL | fetch exactly what you need | over/under-fetching |
 | 10 | SQL DB | tables, schema, ACID | consistency |
+| 10b | ACID | all-or-nothing · valid · isolated · permanent | money correctness |
 | 11 | NoSQL DB | flexible schema, scalable | scale/flexibility |
 | 11b | Vertical Scaling | bigger machine | quick capacity |
 | 12 | Horizontal Scaling | more machines | scale + fault tolerance |
 | 13 | Load Balancer | distributes traffic | HS routing |
 | 14 | Indexing | fast lookup table | read speed |
+| 14b | Indexing internals | B+ tree: flat, sorted, page-per-node | how lookups cost 3–4 page reads |
 | 15 | Replication | copies for reads/failover | read scale + availability |
 | 16 | Sharding | split by rows | write scale + big data |
 | 17 | Vertical Partitioning | split by columns | narrow queries |

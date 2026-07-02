@@ -1,7 +1,7 @@
-# PayPay Securities / Stock Broker — System Design (HLD + LLD)
+# PayPay Securities / Stock Broker App — System Design (HLD + LLD)
 
 > Design a **stock broker app** (PayPay Securities, Robinhood, Groww, Zerodha).
-> Structure follows the AlgoMaster mock interview video, in simple English.
+> Written in simple English. Each service has its own deep-dive.
 > Interviewer's words: *"design PayPay itself, talking to a third party (bank/exchange) — availability, DB read/write performance, scaling, security."*
 > Related: [[Interview_Experience]] · [[Paypay_general_question]]
 
@@ -9,408 +9,509 @@
 
 ## 1. First thing to say: Broker ≠ Exchange
 
-A **stock exchange** (Tokyo Stock Exchange, NSE, NASDAQ) does the **order matching**. It keeps the order book and matches buyers with sellers.
+A **stock exchange** (Tokyo Stock Exchange, NASDAQ) does the **order matching**. It keeps the order book and matches buyers with sellers.
 
-A **broker** (PayPay Securities, Groww, Zerodha) is a **middleman**:
+A **broker** (PayPay Securities) is the **middleman between the user and the exchange**:
 
-- User places a buy/sell order on our app.
-- We check it, save it, and **forward it to the exchange**.
+- User adds money and places a buy/sell order on our app.
+- We check the order, hold the money, and **forward the order to the exchange**.
 - The exchange matches it and tells us the result.
-- We show the result to the user.
-
-**Say this in the first minute:** *"We are building the broker, not the exchange. The exchange already exists — it does the matching. Our job is to talk to the user on one side and the exchange on the other side."*
-
-This one sentence scopes the whole problem correctly.
+- We update the user's money and stocks, and show the result.
 
 ```mermaid
 flowchart LR
-    U[User] -->|buy / sell| B[Broker<br/>= what we build]
-    B -->|forward order| E[Exchange<br/>TSE / NSE<br/>already exists]
-    E -->|result| B
-    B -->|show result| U
+    U["👤 User"] -->|money + orders| B["Broker<br/>= what we build"]
+    B -->|forward order| E["🏛️ Exchange (TSE)<br/>already exists"]
+    E -->|fill result| B
+    B -->|update portfolio| U
 ```
 
----
-
-## 2. Functional Requirements
-
-Keep it to 2 must-haves + 1 good-to-have:
-
-1. **Place orders** — user can buy or sell a stock. Support both:
-   - **Market order** — buy/sell at the current price.
-   - **Limit order** — buy only below price X / sell only above price X.
-   - The order goes from our platform → to the exchange.
-2. **See live stock price** — user sees the price in real time, so they can decide when to buy/sell.
-3. *(Good-to-have)* **Price history charts** — how the stock moved in the last 1 hour / 1 day / 1 month.
-
-Out of scope: order matching, order book — that is the exchange's job.
+**Say this in the first minute:** *"We are building the broker, not the exchange. The exchange does the matching. Our job is: user's money, user's orders, user's portfolio, live prices — and talking to the exchange and the bank."*
 
 ---
 
-## 3. Non-Functional Requirements — the CAP split ⭐
+## 2. Requirements
 
-This is the key insight of the whole design. The two flows want **opposite** things:
+### Functional (what the app does)
 
-| Flow | What it needs | Why |
+1. **Wallet** — add money from the bank, withdraw money to the bank, see balance.
+2. **Live stock price** — see the current price in real time + price chart of the day.
+3. **Place orders** — buy / sell. Two types:
+   - **Market order** — trade now, at the current price.
+   - **Limit order** — trade only at price X or better.
+4. **Order history** — see status of my orders (pending / filled / cancelled), cancel an open order.
+5. **Portfolio** — see my stocks, how many, average buy price, profit/loss.
+6. **Notifications** — "your order was filled", price alerts.
+
+### Non-Functional (how well it must work) ⭐
+
+The two halves of the app want **opposite** things. Say this clearly — it drives the whole design:
+
+| Path | Needs | Why |
 |---|---|---|
-| **Buy / Sell orders** | **High consistency** | Money is involved. If money is deducted, the order must exist. An order must never be lost. It is OK to sometimes fail placing an order — it is NOT OK to lose one. |
-| **See stock price** | **High availability** | User must always see *some* price. It is OK if the price is 10–30 seconds old. It is NOT OK if the price page is down. |
+| **Money path** (wallet, orders, portfolio) | **Strong consistency** | Balance must NEVER be wrong. An order must never be lost or duplicated. Failing sometimes is OK; being wrong is not. |
+| **Price path** (live prices, charts) | **High availability + low latency** | User must always see *a* price. A price 1–2 seconds old is fine. A blank screen is not. |
 
-**One-liner:** *"Order path = consistency over availability. Price path = availability over consistency. So I will design them as two separate paths."*
+Plus:
+- **Durability & audit** — every money movement is recorded forever (regulator: Japan FSA).
+- **Scalability** — price reads are ~100× more than order writes; big spikes at market open (9:00) and close.
+- **Security** — it's a money app: MFA, encryption, fraud checks.
 
----
+### Back-of-envelope (say the method, not memorized numbers)
 
-## 4. Back-of-Envelope Calculation
-
-Say the method out loud, don't just say numbers.
-
-- Total users: **100 million** → assume 10% daily active → **10M DAU**.
-- Each user watches ~10 stocks, checks ~20 times a day:
-  - `10M × 10 × 20 = 2 billion price reads/day`
-  - `2 × 10⁹ ÷ ~10⁵ sec/day ≈ 2 × 10⁴ = ~20,000 QPS` at peak.
-- Orders (buy/sell) are about **10%** of that → **~2,000 QPS**.
-
-**Conclusion:** the platform is **read-heavy** (prices), with a smaller but money-critical write path (orders). Peaks come at **market open and market close**.
+- ~100M users → ~10% daily active → **10M DAU**.
+- Each checks ~10 stocks ~20 times/day → `10M × 10 × 20 = 2B price reads/day ≈ 20,000 QPS peak`.
+- Orders ≈ 10% of that → **~2,000 QPS peak**.
+- **Conclusion:** read-heavy price path (scale with cache + push), smaller but money-critical write path (scale with care).
 
 ---
 
-## 5. High-Level Design — Full Picture
+## 3. High-Level Design — the full picture
 
 ```mermaid
 flowchart TB
     C["📱 Client (mobile / web)"]
-    GW["API Gateway<br/>auth · rate limit · fraud check"]
-    PS["Price Service<br/>(read path)"]
-    OMS["Order Management Service<br/>(write path)"]
-    TS[("Time-series DB<br/>TimescaleDB<br/>price history")]
-    ODB[("Order DB<br/>RDBMS · ACID<br/>orders")]
-    K[["Kafka<br/>(order queue)"]]
-    RPS[["Redis Pub/Sub<br/>(live ticks)"]]
-    EGP["Exchange Gateway Processor<br/>ALL talk with the outside world"]
-    EX["🏛️ Stock Exchange<br/>TSE / NSE"]
+    GW["API Gateway<br/>auth · rate limit · routing"]
+
+    subgraph OUR["Our platform"]
+        PS["📈 Price Service"]
+        OS["📝 Order Service"]
+        WS["💰 Wallet Service"]
+        PF["📊 Portfolio Service"]
+        NS["🔔 Notification Service"]
+        K[["Kafka (events)"]]
+        EGW["🔌 Exchange Gateway<br/>(all talk with exchange)"]
+        R[("Redis<br/>latest prices")]
+        TS[("Time-series DB<br/>price history")]
+        ODB[("Order DB<br/>RDBMS")]
+        WDB[("Wallet DB<br/>RDBMS + ledger")]
+        PDB[("Portfolio DB<br/>read model")]
+    end
+
+    BANK["🏦 Bank"]
+    EX["🏛️ Exchange (TSE)"]
 
     C -->|REST| GW
-    PS -->|"SSE (live prices)"| C
+    PS -->|"SSE (live price)"| C
     GW --> PS
-    GW --> OMS
+    GW --> OS
+    GW --> WS
+    GW --> PF
 
+    PS --> R
     PS --> TS
-    OMS --> ODB
-    OMS --> K
-    K --> EGP
+    OS --> ODB
+    OS <-->|"hold / settle / release"| WS
+    WS --> WDB
+    WS <-->|deposit / withdraw| BANK
+    PF --> PDB
 
-    EGP -->|"place order"| EX
-    EX -->|"price ticks (stream)"| EGP
-    EX -->|"order updates (webhook)"| EGP
+    OS --> K
+    K --> EGW
+    K --> PF
+    K --> NS
+    NS -->|push| C
 
-    EGP -->|"save ticks"| TS
-    EGP -->|"publish tick"| RPS
-    RPS -->|"push"| PS
-    EGP -->|"update order status"| ODB
+    EGW <-->|"orders + fills"| EX
+    EX -->|"price feed"| EGW
+    EGW -->|ticks| R
+    EGW -->|ticks| TS
+    EGW -->|"fill events"| K
 ```
 
-### The services and why each exists
+### One line per service
 
-| Component | Job | Why it exists |
-|---|---|---|
-| **API Gateway** | Auth, rate limiting, fraud checks | It's a financial platform — every request must be checked before it enters. |
-| **Price Service** | Give prices to clients (live + today's history) | Read path. Scales separately from the money path. |
-| **Order Management Service (OMS)** | Receive orders, save them, queue them | Write path. Owns the order lifecycle. |
-| **Exchange Gateway Processor (EGP)** | ALL communication with the exchange | Single Responsibility: the exchange is the "outside world" — one service handles it (send orders, receive ticks, receive webhooks). |
-| **Order DB** (RDBMS) | Store every order | Orders need ACID transactions. |
-| **Time-series DB** (TimescaleDB) | Store price ticks | Built for timestamp data; keeps price firehose away from the order DB. |
-| **Kafka** | Buffer between OMS and EGP | Don't bombard the exchange; gives back-pressure and retries. |
-| **Redis Pub/Sub** | Push live ticks EGP → Price Service | Push model, no polling inside our system. |
+| Service | Job |
+|---|---|
+| **API Gateway** | Front door: auth (JWT/OAuth2), rate limit, route to services. Stateless. |
+| **Price Service** | Give live prices + charts to users. Read path. |
+| **Order Service** | Receive, validate, save, and track orders. The order state machine lives here. |
+| **Wallet Service** | The money. Balance, hold/settle/release, deposits/withdrawals via the bank. Source of truth = double-entry ledger. |
+| **Portfolio Service** | What stocks the user owns, average price, profit/loss. Updated when orders fill. |
+| **Exchange Gateway** | The only service that talks to the exchange: sends orders out, receives fills and the price feed in. |
+| **Notification Service** | "Order filled", price alerts. Listens to Kafka events. |
+| **Kafka** | Event backbone between services: order events, fill events, price ticks. |
 
-Now deep-dive each flow.
+**Why separate services?** Split along ownership + scaling lines: the price path (huge reads) must not share a deployment with the money path (careful writes). And each service owns its own DB.
+
+Now deep-dive each service.
 
 ---
 
-## 6. Flow 1 — Live Stock Price (read path)
+## 4. Price Service — "see live stock price" 📈
 
-### 6.1 How the price travels
+### 4.1 Where do prices come from?
+
+We do **not** poll the exchange. The exchange **broadcasts a price feed** (TSE's system is called **arrowhead**); brokers pay to subscribe, directly or via a vendor (QUICK, Bloomberg). Our **Exchange Gateway** receives this stream and fans it out inside our platform.
 
 ```mermaid
 flowchart LR
-    EX["Exchange<br/>(TSE arrowhead feed)"] -->|"stream of ticks<br/>(we subscribe once)"| EGP["Exchange Gateway<br/>Processor"]
-    EGP -->|save every tick| TS[("Time-series DB")]
-    EGP -->|publish latest tick| R[["Redis Pub/Sub"]]
-    R -->|push| PS["Price Service"]
-    TS -->|today's history| PS
+    EX["Exchange feed<br/>(TSE arrowhead)"] -->|"stream of ticks"| EGW["Exchange<br/>Gateway"]
+    EGW -->|"latest price<br/>per symbol"| R[("Redis")]
+    EGW -->|"every tick"| TS[("Time-series DB")]
+    EGW -->|"publish tick"| PS["Price Service"]
+    R -->|"price right now"| PS
+    TS -->|"today / history"| PS
     PS -->|"SSE push"| C["📱 Client"]
 ```
 
-**Two directions, two mechanisms:**
-- **Exchange → us:** we do NOT poll the exchange (it is already overloaded, and we often pay per request). Instead we **subscribe once** to its price stream. The exchange pushes every tick to us. (In Japan: TSE's **arrowhead** system broadcasts the feed; brokers pay to subscribe, directly or via a vendor like QUICK.)
-- **Us → client:** we push with **SSE (Server-Sent Events)** — see below.
-
-### 6.2 Two types of users opening the app
-
-1. **User already watching the page** → just needs new ticks → **SSE** stream sends each new price.
-2. **User who just opened the app** (say at 11:00, market opened at 9:00) → the price may not change for a few seconds, so no push is coming. They need **today's history first** (from the Time-series DB), then the SSE stream continues from there.
-
-So: **history from DB + live updates over SSE** = both users are happy.
-
-### 6.3 Why SSE, not WebSocket, not polling? (classic cross-question)
-
-| Option | Verdict | Why |
-|---|---|---|
-| **Polling** | ❌ | Client asks again and again → heavy load on Price Service, wasted requests when price didn't change. |
-| **WebSocket** | ❌ overkill | WebSocket is for **two-way** talk. Here the client sends nothing after subscribing — data flows only server → client. Also, many open WebSockets are heavy for the client app. |
-| **SSE** | ✅ | One-way push over one persistent connection. Client says "I want INFY" once, then just receives. Exactly our shape of traffic. |
-
-**Answer template:** *"The client only receives; it never sends after subscribing. That is one-way, so SSE fits. WebSocket would work but is an overkill for one-way traffic."*
-
-### 6.4 Storing prices — Time-series DB
-
-- **Table:** `price_history(symbol, timestamp, price)`, **indexed by timestamp**, bucketed (e.g. per day).
-- **Why not the order DB?** Thousands of ticks per second would crush the transactional DB. Keep the price firehose in a store built for it (**TimescaleDB** — built on Postgres — or InfluxDB).
-- **Sharding:** shard by **symbol**. Hot symbols (top 50–100 by volume) can go to their own shard so they don't starve the rest.
+### 4.2 Three places for price data — and why all three
 
 | Data | Where | Durable? | Why |
 |---|---|---|---|
-| Latest tick | Redis / memory | ❌ | Replaced every second; next tick from the exchange refills it |
-| Today + history | Time-series DB | ✅ | Charts need it |
-| Orders / money | RDBMS | ✅ | Money must be correct and durable |
+| **Latest price** ("Toyota now = ¥3,000") | **Redis** | ❌ No | Replaced every second. If lost, next tick refills it. Backend services (order validation, portfolio value) also read this. |
+| **Price history** (charts) | **Time-series DB** (TimescaleDB / InfluxDB) | ✅ Yes | Built for timestamp data. Keeps the tick firehose OUT of the money DB. |
+| *(never)* current price in the money DB | — | — | Thousands of ticks/sec would crush the transactional DB for data we overwrite instantly. |
 
-### 6.5 API
+**Intuition:** latest price = the time on a clock (read it, don't save every second). History = a logbook. Money = a bank ledger (sacred, separate).
+
+### 4.3 How does the price reach the phone? SSE.
+
+| Option | Verdict | Why |
+|---|---|---|
+| Polling | ❌ | Client asks again and again; most answers are "no change". Wasteful. |
+| WebSocket | ❌ overkill | WebSocket = two-way. Here the client sends nothing after subscribing. |
+| **SSE (Server-Sent Events)** | ✅ | One-way push over one open connection. Client says "I watch Toyota" once, then just receives. Exactly our traffic shape. |
+
+### 4.4 The two kinds of users
+
+1. **Already watching the page** → SSE sends each new tick. Done.
+2. **Just opened the app at 11:00** (market opened at 9:00) → no tick may come for seconds. So first show: **latest price from Redis + today's chart from the time-series DB**, then continue with SSE ticks on top.
+
+**One-liner:** *"Redis answers 'what is the price NOW?' (pull, has memory). SSE answers 'the price just CHANGED' (push, no memory). You need both."*
+
+### 4.5 API
 
 ```
-GET /api/v1/stock/price?symbol=INFY&timeRange=1d
+GET /api/v1/stocks/{symbol}/price              → latest price (Redis)
+GET /api/v1/stocks/{symbol}/chart?range=1d     → chart data (time-series DB)
+GET /api/v1/stocks/{symbol}/stream             → SSE subscription (live ticks)
 ```
-- Returns the price history for the range **and** subscribes the client to live SSE updates for that symbol.
-- `timeRange`: `1h | 1d | 1m` — bucketed data for charts.
 
 ---
 
-## 7. Flow 2 — Place an Order (write path)
+## 5. Wallet Service — the money 💰
 
-### 7.1 The full journey of an order
+The heart of the design. If you get one service perfect, make it this one.
+
+### 5.1 Two balances per user, three operations
+
+Every wallet has **`available`** (spendable) and **`reserved`** (locked for open orders).
+
+```mermaid
+flowchart LR
+    A["🛒 Order placed"] -->|"HOLD<br/>available ↓ reserved ↑"| B["⏳ Order open"]
+    B -->|"filled → SETTLE<br/>reserved ↓ (money leaves)"| C["✅ Done"]
+    B -->|"cancelled → RELEASE<br/>reserved ↓ available ↑"| D["↩️ Money back"]
+```
+
+- **HOLD** (on order submit): move money from `available` to `reserved`. Not enough money → reject the order here.
+- **SETTLE** (on fill): the reserved money actually leaves. User gets stocks instead.
+- **RELEASE** (on cancel/reject): reserved money goes back to `available`.
+
+**Why hold, why not just check the balance?** Between the check and the fill, the user could place a **second** order with the **same money**. Two orders, one balance → double-spend. Holding at submit time makes that impossible.
+
+### 5.2 The double-entry ledger (source of truth)
+
+Never do `UPDATE balance = balance - x` and forget the past. Instead:
+
+- Every money movement = **two rows** in an append-only `ledger_entries` table: one debit + one credit (e.g. `user_cash −10,000 / broker_clearing +10,000`).
+- The balance is **calculated** from ledger rows (with periodic checkpoints so we don't sum millions of rows).
+- Why: **audit** (regulator can replay every yen), **reconciliation** (compare our ledger vs bank vs exchange), and no silent drift.
+
+### 5.3 Concurrency — two orders race on one balance
+
+Serialize the HOLD step with a **row lock**:
+
+```sql
+BEGIN;
+SELECT * FROM wallets WHERE user_id = ? FOR UPDATE;   -- lock the row
+-- check available >= amount, then move available → reserved, write ledger rows
+COMMIT;
+```
+
+- **Pessimistic** (`FOR UPDATE`): simple and always correct. One user rarely places many orders per second, so locking their one row is cheap. ← use this for money.
+- **Optimistic** (`@Version` + retry): better when conflicts are rare. Use for low-contention updates elsewhere.
+
+**Rule to say:** *"Money correctness > throughput on this one row."*
+
+### 5.4 Deposits & withdrawals (the bank — the "third party")
 
 ```mermaid
 sequenceDiagram
     participant C as Client
-    participant GW as API Gateway
-    participant OMS as Order Mgmt Service
-    participant DB as Order DB
-    participant K as Kafka
-    participant EGP as Exchange Gateway
-    participant EX as Exchange
+    participant WS as Wallet Service
+    participant B as Bank
 
-    C->>GW: POST /order (buy INFY)
-    GW->>OMS: (after auth + rate limit)
-    OMS->>DB: save order (status=PENDING,<br/>exchange_order_id=NULL)
-    OMS->>K: push order to queue
-    OMS-->>C: accepted ✅
-    K->>EGP: consume order (one by one)
-    EGP->>EX: place order
-    EX-->>EGP: exchange_order_id
-    EGP->>DB: update exchange_order_id
-    Note over EX: matching can take<br/>minutes or hours...
-    EX->>EGP: webhook: order FILLED
-    EGP->>DB: status = FILLED
-    OMS-->>C: notify user
+    C->>WS: deposit ¥10,000 (with idempotency key)
+    WS->>WS: save transaction PENDING
+    WS->>B: charge request (circuit breaker + timeout)
+    B-->>WS: webhook / callback: success
+    WS->>WS: ledger rows + balance ↑, status = COMPLETED
+    WS-->>C: notify ✅
 ```
 
-### 7.2 Order DB schema (memorize this)
+- Bank calls are **slow and can fail** → wrap with **circuit breaker + retry + timeout** (Resilience4j — PayPay really uses it). A slow bank must never freeze our whole app.
+- Bank confirms asynchronously (webhook), so our transaction sits in `PENDING` until confirmed.
+- **Idempotency key** on every deposit/withdraw: a network retry must not charge twice.
+- Money type in code: **never `double`** → `BigDecimal` or integer yen. (0.1 cannot be stored exactly in floating point.)
 
-```sql
-orders (
-  order_id          PK,        -- our own ID
-  user_id,
-  symbol,
-  side,                        -- BUY / SELL
-  type,                        -- MARKET / LIMIT
-  price,                       -- NULL for market orders
-  status,                      -- enum: PENDING / PLACED / FILLED / CANCELLED / FAILED
-  exchange_order_id,           -- NULL at first ⭐
-  created_at
-)
-```
+---
 
-**`exchange_order_id` is the star column.** The exchange keeps its own DB and gives every order its own ID. Many brokers (Groww, Zerodha, PayPay…) all talk to the same exchange — the exchange only knows *its* ID. So:
-- `exchange_order_id = NULL` → the exchange has NOT accepted our order yet.
-- `exchange_order_id = X` → the exchange accepted it; now it's on the exchange to fill it.
-- This ID is also the key for **reconciliation** (matching our records against the exchange's records).
+## 6. Order Service — place & track orders 📝
 
-Order DB choice: **RDBMS (PostgreSQL / MySQL / Aurora)** — placing an order touches several rows, and we need **ACID**: all steps happen or none.
-
-### 7.3 Why store orders ourselves? The exchange already has them! (cross-question)
-
-Four reasons:
-1. **Cost + load** — every call to the exchange costs money and adds load. "Show my last 30 orders" should hit *our* DB, not the exchange.
-2. **Speed** — user sees their order history instantly from our DB.
-3. **Analytics** — we can build OLAP / user-behavior analysis on our own data.
-4. **Reconciliation & audit** — for any dispute or regulator check, we have our own record: "this order was received at this time on our platform."
-
-### 7.4 Why Kafka between OMS and the exchange? (cross-question)
-
-- The exchange is already overloaded — we must **not bombard** it, especially at market open/close.
-- Kafka is a **buffer with back-pressure**: OMS accepts orders fast, EGP drains the queue at a controlled speed.
-- Kafka gives **retries** for free, and durability — an accepted order is never lost even if a service crashes.
-
-### 7.5 How do we learn the order was filled? Webhook. (cross-question)
-
-Matching can take a long time (e.g. upper circuit — everyone buying, nobody selling → a limit order can wait hours).
-
-| Option | Verdict | Why |
-|---|---|---|
-| We poll the exchange | ❌ | Load + cost on the exchange, most polls return "no change". |
-| SSE from exchange | ❌ | Needs a persistent connection held open for hours for slow orders. |
-| **Webhook** | ✅ | We give the exchange a URL. When the order status changes, THEY call US. No polling, no held connection. |
-
-The webhook lands on the **Exchange Gateway Processor**, which updates the Order DB.
-
-### 7.6 What if the order gets stuck? (cross-question)
-
-Two failure cases:
-
-**Case 1 — exchange never accepted it** (`exchange_order_id` still NULL):
-- Retry from Kafka **4–5 times**.
-- Still failing → move to a **Dead Letter Queue (DLQ)** → manual check or a separate repair process.
-
-**Case 2 — exchange accepted it but it stays PENDING for long:**
-- Normal for limit orders — it's on the exchange now.
-- Safety net: a **background reconciliation job** asks the exchange in batches: "here are the orders from the last 5 minutes — any updates?" This catches lost webhooks.
-
-### 7.7 Order state machine
+### 6.1 Order lifecycle (state machine — memorize)
 
 ```mermaid
 stateDiagram-v2
     [*] --> PENDING: user places order
-    PENDING --> PLACED: exchange accepted<br/>(got exchange_order_id)
-    PENDING --> FAILED: retries + DLQ exhausted
-    PLACED --> PARTIALLY_FILLED: partial fill
+    PENDING --> VALIDATED: checks OK + funds held
+    PENDING --> REJECTED: bad symbol / market closed / no money
+    VALIDATED --> SENT: sent to exchange
+    SENT --> OPEN: exchange accepted<br/>(we got exchange_order_id)
+    OPEN --> PARTIALLY_FILLED: some quantity filled
     PARTIALLY_FILLED --> FILLED
-    PLACED --> FILLED: webhook - filled
-    PLACED --> CANCELLED: user cancels
-    PARTIALLY_FILLED --> CANCELLED: user cancels rest
+    OPEN --> FILLED: fully filled
+    OPEN --> CANCELLED: user cancels → release hold
+    PARTIALLY_FILLED --> CANCELLED: cancel rest → release remaining hold
+    OPEN --> EXPIRED: limit order, end of day
     FILLED --> [*]
 ```
 
-### 7.8 API
+### 6.2 Order table (Order DB = RDBMS, needs ACID)
 
+```sql
+orders (
+  order_id          PK,     -- our own ID
+  user_id, symbol,
+  side,                     -- BUY / SELL
+  type,                     -- MARKET / LIMIT
+  limit_price,              -- NULL for MARKET
+  quantity, filled_quantity,
+  status,                   -- the state machine above
+  exchange_order_id,        -- NULL until the exchange accepts ⭐
+  idempotency_key UNIQUE,   -- no duplicate orders on retry ⭐
+  created_at
+)
 ```
-POST /api/v1/order
-Body: {
-  "symbol": "INFY",
-  "side":   "BUY",          // BUY | SELL
-  "type":   "LIMIT",        // MARKET | LIMIT
-  "price":  1500.00         // null for MARKET
-}
-Header: auth token (user_id comes from here, never from the body)
+
+Two star columns:
+- **`idempotency_key`** — client sends a unique key per order attempt. Network retry with the same key → return the existing order, don't create a second one.
+- **`exchange_order_id`** — the exchange's own ID for our order. `NULL` = exchange hasn't accepted it yet. It's the link for status updates and reconciliation.
+
+### 6.3 Placing a buy order — step by step
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant OS as Order Service
+    participant WS as Wallet Service
+    participant K as Kafka
+    participant EGW as Exchange Gateway
+    participant EX as Exchange
+
+    C->>OS: POST /orders (buy 10 × Toyota, idempotency key)
+    OS->>OS: validate: symbol? market open? duplicate key?
+    OS->>WS: HOLD qty × price + fee
+    WS-->>OS: held ✅ (or reject: no money)
+    OS->>OS: save order VALIDATED
+    OS->>K: OrderCreated event
+    OS-->>C: accepted ✅ (fast — we don't wait for the exchange)
+    K->>EGW: consume order
+    EGW->>EX: place order (FIX protocol)
+    EX-->>EGW: exchange_order_id
+    EGW->>OS: status = OPEN
+    Note over EX: matching... can take<br/>seconds or hours (limit order)
+    EX->>EGW: fill report (webhook / exec report)
+    EGW->>K: TradeExecuted event
+    K->>OS: status = FILLED
 ```
 
----
+Key points to narrate:
+- **User gets the answer fast** — we reply "accepted" after saving + holding funds. The exchange part is async behind Kafka.
+- **Why Kafka in between?** The exchange is shared and rate-limited; Kafka is a buffer with **back-pressure** (accept orders fast at market open, drain at a controlled speed) and gives **retries + durability** for free.
+- **Fill notifications come by webhook / execution report** — we never poll the exchange ("has it filled yet?" thousands of times). They call us.
+- **Stuck orders:** no `exchange_order_id` after 4–5 retries → **dead-letter queue** → manual/automated repair. Plus a background **reconciliation job** compares our orders with the exchange in batches, catching lost webhooks.
 
-## 8. Scaling & Optimizations (non-functional round-up)
+### 6.4 What happens after a fill? (event choreography)
 
-### 8.1 Price fan-out: push, don't pull
-If EGP calls the Price Service by plain API for every tick, the Price Service gets bombarded. Even Kafka here means the Price Service must keep *pulling*. Better: **Redis real-time Pub/Sub** — EGP publishes a tick, Redis **pushes** it to all Price Service instances. Whole pipeline becomes push: `exchange → EGP → Redis pub/sub → Price Service → SSE → client`.
-
-### 8.2 Put our servers next to the exchange (co-location)
-Latency matters in trading. Real brokers put their servers **in the same data center** (or at least the same region) as the exchange, with direct wired connections. → faster order round-trip, faster ticks.
-
-### 8.3 Hybrid capacity — don't rely on auto-scaling alone
-- Load spikes are **predictable**: market open and market close. **Pre-provision warm servers** for those windows; auto-scaling reacts too slowly.
-- **Dedicated servers for big clients** (hedge funds, fund platforms) — their orders are huge and bulky.
-- **Hybrid load balancing**: a symbol with huge volume can get its own bigger price server, instead of blindly equal distribution.
-
-### 8.4 DB scaling
-- **Order DB:** shard by **user_id** (all of one user's orders on one shard), index by timestamp → "last 30 orders" is one fast shard-local query.
-- **Time-series DB:** shard by **symbol**, hot symbols isolated.
-
-### 8.5 Don't bombard the exchange (rate limiting toward the exchange)
-- Kafka already gives back-pressure on orders.
-- For price subscriptions: keep the top symbols (large-cap) always fresh; for low-volume symbols, slightly **stale data is acceptable** — availability over consistency on the price path.
-- The exchange also rate-limits us on its side; our EGP has its own rules so we never hit those limits.
-
----
-
-## 9. What the video skipped — the Money Path (PayPay will ask this) ⭐
-
-The video's interviewer skipped the wallet. PayPay Securities interviewers do NOT — money correctness is their favorite topic.
-
-### 9.1 Hold → Settle → Release
-
-Never deduct money directly when an order is placed. Use three steps:
+The `TradeExecuted` event on Kafka drives everything downstream:
 
 ```mermaid
 flowchart LR
-    A["Order placed"] -->|HOLD funds<br/>available ↓ reserved ↑| B["Order waiting"]
-    B -->|"filled → SETTLE<br/>reserved ↓ (money leaves)"| C["Done ✅"]
-    B -->|"cancelled → RELEASE<br/>reserved ↓ available ↑"| D["Money back ✅"]
+    E["TradeExecuted<br/>(Kafka event)"] --> OS["Order Service<br/>status → FILLED"]
+    E --> WS["Wallet Service<br/>SETTLE the hold"]
+    E --> PF["Portfolio Service<br/>add 10 Toyota shares"]
+    E --> NS["Notification<br/>'order filled ✅'"]
 ```
 
-**Why hold instead of just checking the balance?** Between the check and the fill, the user could place a *second* order with the same money → double-spend. Holding at submit time blocks that.
+- **Duplicate fills:** the exchange may send the same fill twice → every consumer dedupes by **execution ID** (idempotent consumers).
+- **Reliable publish:** what if the DB commit succeeds but the Kafka publish fails? → **Transactional Outbox**: write the order row AND an outbox event row in the *same* DB transaction; a relay ships outbox rows to Kafka. No lost events, no ghost events.
+- **Cross-service atomicity:** Order, Wallet, Portfolio have separate DBs → no 2PC (slow, locks across services). Use the **Saga pattern**: a chain of local transactions with **compensating actions**. Example: exchange rejects the order *after* money was held → a compensating event **releases** the hold.
 
-### 9.2 Rules for the money path (say them all)
-- **Never use `double` for money** → `BigDecimal` or integer cents. (0.1 cannot be stored exactly in floating point.)
-- **Double-entry ledger** — every money move = one debit row + one credit row, append-only. Balance is *calculated* from the ledger, never blindly `UPDATE balance = balance - x`. Auditable, reconcilable.
-- **Row lock on the hold step** — `SELECT ... FOR UPDATE` on the user's account row, so two racing orders can't overspend. One user rarely fires many orders/sec, so this lock is cheap.
-- **Idempotency key** on every order request — a network retry must not create two orders. Same idea for exchange fill reports: dedupe by execution ID.
-- **No 2PC across services** — Order, Wallet, Portfolio are separate services. Use **Saga**: local transactions + compensating actions (exchange rejects after money was held → an event *releases* the hold).
-- **Transactional Outbox** — write the order row and the Kafka event row in the *same* DB transaction; a relay ships it to Kafka. Fixes the "DB committed but Kafka publish failed" bug.
+### 6.5 API
+
+```
+POST   /api/v1/orders          {symbol, side, type, quantity, limitPrice?}   + Idempotency-Key header
+GET    /api/v1/orders?status=OPEN
+DELETE /api/v1/orders/{id}     → cancel (→ release the hold)
+```
+
+---
+
+## 7. Portfolio Service — what do I own? 📊
+
+### 7.1 What it stores
+
+```sql
+holdings (
+  user_id, symbol,
+  quantity,
+  avg_buy_price,       -- weighted average, updated on every buy fill
+  updated_at
+)
+```
+
+- **Buy fill:** `new_avg = (old_qty × old_avg + fill_qty × fill_price) / (old_qty + fill_qty)`, quantity ↑.
+- **Sell fill:** quantity ↓; **realized P&L** = `(sell_price − avg_buy_price) × qty`.
+- **Unrealized P&L** (the green/red number on screen) = `(current_price − avg_buy_price) × qty` — current price comes from **Redis** (Price Service data), never from the money DB.
+
+### 7.2 It's a read model (CQRS) — and that's fine
+
+Portfolio is **derived data**: it can always be rebuilt by replaying fill events. So:
+
+- It updates **asynchronously** from `TradeExecuted` events → the dashboard may lag ~1 second. **Acceptable.**
+- But: the **spendable balance used to validate a new order** is NEVER read from here — that comes from the Wallet Service (strong consistency).
+
+**Golden line:** *"I separate money-truth (strong consistency, Wallet) from display (eventual consistency, Portfolio). The user's dashboard can be 1 second late; their spending power cannot."*
+
+Also: sell orders need a **hold on shares** (same idea as holding cash) — reserve the shares at submit so the user can't sell the same shares twice.
+
+### 7.3 API
+
+```
+GET /api/v1/portfolio               → holdings + P&L
+GET /api/v1/portfolio/summary       → total value (uses Redis prices)
+```
+
+---
+
+## 8. Exchange Gateway — the only door to the outside 🔌
+
+One service owns ALL exchange communication (Single Responsibility):
+
+| Direction | What | How |
+|---|---|---|
+| **Out** | Send orders, cancels | Exchange protocol (**FIX**), consuming from Kafka at a controlled rate |
+| **In** | Execution reports (fills) | Exchange pushes to us (session / webhook) → publish `TradeExecuted` to Kafka |
+| **In** | Price feed (every tick) | Subscribe once to the broadcast feed → write Redis + time-series DB + publish ticks |
+
+Why one dedicated service:
+- **Protection both ways:** circuit breaker so a slow exchange doesn't freeze us; rate control so we don't bombard the exchange (they limit and charge us).
+- **Translation:** internal clean events ↔ exchange's raw protocol, in one place.
+- **Co-location:** real brokers put these servers physically near the exchange's data center — lower latency for orders and ticks.
+
+---
+
+## 9. Scaling, Availability, Security (their exact axes)
+
+### 9.1 Scale the READ path (prices, portfolio)
+
+- **Redis** for the hottest value (latest price) — O(1), sub-ms, absorbs the 100:1 read load.
+- **SSE push** instead of polling — clients receive only changes.
+- **Kafka partition per symbol** for ticks — keeps per-symbol order, scales across symbols.
+- **Read replicas** for history/portfolio queries; **CQRS read model** so dashboards never touch the write DB.
+
+### 9.2 Scale the WRITE path (money)
+
+- Keep the **synchronous part minimal**: validate + hold funds + save order. Everything else async via Kafka.
+- **Shard by user_id** — one user's wallet + orders live on one shard (transactions stay local); load spreads across shards.
+- Ledger is **append-only** → no update contention, no hot rows.
+- **Why shard by user, not by symbol?** Money must be transactionally together per user. Symbol-sharding is for the *price* path — a different concern.
+
+### 9.3 Availability
+
+- Stateless services → N replicas on **Kubernetes**, multi-AZ, auto-scale.
+- Aurora multi-AZ failover; Kafka replication factor ≥ 3.
+- **Circuit breakers (Resilience4j)** around bank + exchange — a sick third party degrades one feature, not the app.
+- **Predictable spikes:** market open/close → **pre-provision warm servers**; auto-scaling alone reacts too late.
+- Everything idempotent + retryable → a pod restart is always safe.
+
+### 9.4 Security
+
+- TLS everywhere; **AES-256** at rest for PII and bank details.
+- **OAuth2 + JWT**; **MFA** for login and withdrawals.
+- **Immutable audit log** (append-only, S3 object-lock) — FSA compliance.
+- Fraud/AML monitoring on trading patterns; transaction limits.
+- Network isolation: money services are not reachable from the edge directly.
 
 ---
 
 ## 10. Cross-Questions — quick answers
 
-**Q: Why build the broker and not the exchange?**
-> Matching is the exchange's job and its regulatory role. We route, validate, and track — building a matching engine would be re-implementing TSE.
+**Q: Why not build the matching engine yourself?**
+> Matching is the exchange's job and regulatory role. We'd be re-implementing TSE, badly. A broker routes.
 
-**Q: Why SSE over WebSocket?**
-> Traffic is one-way (server → client). SSE does exactly that over one persistent connection. WebSocket is for two-way and is overkill here.
+**Q: Why hold funds instead of checking balance and debiting on fill?**
+> Between check and fill the user can place a second order with the same money. Hold at submit = no double-spend.
 
-**Q: Why not poll the exchange for prices?**
-> Exchange is overloaded and often charges per call. Subscribe once to its stream; it pushes to us.
+**Q: Two orders hit the same balance at the same time?**
+> `SELECT ... FOR UPDATE` row lock on the wallet row serializes the hold. One row per user — cheap and always correct.
 
-**Q: Why keep our own Order DB when the exchange has the data?**
-> Cost/load on the exchange, fast reads for users, our own analytics, and reconciliation/audit records.
+**Q: Why a ledger instead of a balance column?**
+> A mutable balance loses history and can silently drift. An append-only debit/credit ledger is auditable and reconcilable; the balance is a checkpointed, derived value.
 
-**Q: What is `exchange_order_id` for?**
-> The exchange's own ID for our order. NULL = not accepted yet. It's the link for status updates and reconciliation.
+**Q: Order Service committed, Kafka publish failed?**
+> Transactional Outbox — domain row + event row in one local transaction, a relay publishes.
 
-**Q: Order stuck pending forever — what happens?**
-> Not accepted → Kafka retries → DLQ → manual repair. Accepted but slow → normal for limit orders; a batch reconciliation job catches missed webhooks.
+**Q: A trade touches Order + Wallet + Portfolio DBs — how is it atomic?**
+> It isn't one transaction. Saga: local transactions + compensating actions (rejection after hold → release event).
 
-**Q: Sudden surge of orders — how do you protect the exchange?**
-> Kafka back-pressure (accept fast, drain slow), rate rules in EGP, pre-provisioned servers at open/close, stale-price tolerance for low-volume symbols.
+**Q: Exchange sends the same fill twice?**
+> Idempotent consumers — dedupe by execution ID.
 
-**Q: Two orders race on the same wallet balance?**
-> Hold model + `SELECT ... FOR UPDATE` on the account row. Pessimistic lock, because money correctness > throughput here.
+**Q: A client retry places the order twice?**
+> Idempotency key stored with a unique constraint — the retry returns the original order.
 
-**Q: DB commit ok, Kafka publish failed?**
-> Transactional Outbox — both writes in one local transaction, relay publishes.
+**Q: Exactly-once processing — possible?**
+> Not exactly-once *delivery*. At-least-once + idempotent consumers = exactly-once *effect* — which is what money needs.
 
-**Q: Exactly-once processing possible?**
-> Not exactly-once *delivery* — but at-least-once delivery + idempotent consumers = exactly-once *effect*, which is what money needs.
+**Q: Why SSE and not WebSocket for prices?**
+> Traffic is one-way (server → client). SSE does exactly that. WebSocket is for two-way and is overkill.
 
-**Q: How to improve DB reads?** → read replicas + Redis for hot values + a separate read model (CQRS) for the portfolio screen.
-**Q: How to improve DB writes?** → keep the sync path minimal (hold funds + save order), push the rest async via Kafka, shard by user_id, append-only ledger (no update hotspots).
+**Q: Portfolio is eventually consistent — won't users see wrong balances?**
+> Display can lag a second. The spendable balance for validation is read strongly from the Wallet — money-truth and display are separated.
+
+**Q: How do you improve DB reads?** → Redis for hot values, read replicas, CQRS read models.
+**Q: How do you improve DB writes?** → minimal sync path, async via Kafka, shard by user_id, append-only ledger.
+
+**Q: The bank API is down — what happens?**
+> Circuit breaker opens → deposits show "processing", rest of the app works. Pending transactions complete when the bank recovers. Fail one feature, not the app.
 
 ---
 
 ## 11. PayPay's Actual Stack (name-drop for bonus points)
 
-- **Language:** Java & Kotlin on **Spring Boot** (some PHP legacy). Libraries: JUnit, **Resilience4j** (circuit breaker for exchange/bank calls), Feign.
-- **Data:** Aurora MySQL, **TiDB**, DynamoDB, ElasticSearch, **Redis**.
+- **Language:** Java & Kotlin on **Spring Boot** (some PHP legacy). Libraries: JUnit, **Resilience4j**, Feign.
+- **Data:** Aurora MySQL, **TiDB** (distributed SQL), DynamoDB, ElasticSearch, **Redis**.
 - **Async:** **Kafka**. **Infra:** AWS, Kubernetes on EC2, Docker, ArgoCD.
-- PayPay runs **100+ microservices across ~10 teams** — so a microservice + async-events answer is the expected shape.
-- Japan mapping: exchange = **TSE** (feed system: **arrowhead**), market-data vendor = **QUICK**, regulator = **FSA** (audit logs are mandatory).
+- PayPay runs **100+ microservices across ~10 teams** — microservices + async events is the expected answer shape.
+- Japan mapping: exchange = **TSE** (feed system **arrowhead**), data vendor = **QUICK**, regulator = **FSA**.
 
 ---
 
 ## 12. LLD — Java Class Design ⭐
 
-The coding round may ask you to model the domain. Clean, idiomatic Java:
+The coding round may ask you to model the domain.
 
 ### 12.1 Enums & Money
 
 ```java
 public enum Side { BUY, SELL }
 public enum OrderType { MARKET, LIMIT, STOP_LOSS }
-public enum OrderStatus { PENDING, PLACED, PARTIALLY_FILLED, FILLED, CANCELLED, FAILED }
+public enum OrderStatus { PENDING, VALIDATED, SENT, OPEN,
+                          PARTIALLY_FILLED, FILLED,
+                          REJECTED, CANCELLED, EXPIRED }
 
 // NEVER double for money.
 public record Money(BigDecimal amount, Currency currency) {
@@ -419,11 +520,11 @@ public record Money(BigDecimal amount, Currency currency) {
 }
 ```
 
-### 12.2 Order — guarded state transitions
+### 12.2 Order — guarded state transitions (State pattern)
 
 ```java
 public class Order {
-    private final String id;            // our ID, also idempotency anchor
+    private final String id;            // our ID, idempotency anchor
     private String exchangeOrderId;     // null until exchange accepts ⭐
     private final String userId;
     private final String symbol;
@@ -443,29 +544,7 @@ public class Order {
 }
 ```
 
-Talking points: final identity fields, `BigDecimal` price, illegal transitions throw (**State pattern**).
-
-### 12.3 Strategy pattern — order types
-
-```java
-public interface OrderTypeStrategy {
-    boolean isExecutable(Order order, Money marketPrice);
-}
-class MarketOrder implements OrderTypeStrategy {
-    public boolean isExecutable(Order o, Money mkt) { return true; }
-}
-class LimitOrder implements OrderTypeStrategy {
-    public boolean isExecutable(Order o, Money mkt) {
-        return o.getSide() == Side.BUY
-             ? mkt.amount().compareTo(o.getLimitPrice().amount()) <= 0
-             : mkt.amount().compareTo(o.getLimitPrice().amount()) >= 0;
-    }
-}
-```
-
-New order type = new class, no `if/else` sprawl (Open/Closed Principle).
-
-### 12.4 Wallet — hold / settle / release
+### 12.3 Wallet — hold / settle / release
 
 ```java
 public class Wallet {
@@ -488,13 +567,57 @@ public class Wallet {
 }
 ```
 
-*In production this is backed by the double-entry ledger + `SELECT ... FOR UPDATE`.*
+*In production: backed by the double-entry ledger + `SELECT ... FOR UPDATE`. This class shows you understand the state model.*
 
-### 12.5 Order Book (only if pushed toward the exchange side)
+### 12.4 Portfolio & Holding
+
+```java
+public class Holding {
+    private final String symbol;
+    private int quantity;
+    private Money avgBuyPrice;
+
+    public void applyBuyFill(int qty, Money price) {
+        Money totalCost = avgBuyPrice.multiply(quantity).add(price.multiply(qty));
+        quantity += qty;
+        avgBuyPrice = totalCost.divide(quantity);        // weighted average
+    }
+    public Money unrealizedPnl(Money marketPrice) {
+        return marketPrice.subtract(avgBuyPrice).multiply(quantity);
+    }
+}
+
+public class Portfolio {
+    private final Map<String, Holding> holdings = new ConcurrentHashMap<>();
+    // updateOnFill(...), totalValue(priceLookup) ...
+}
+```
+
+### 12.5 Strategy pattern — order types
+
+```java
+public interface OrderTypeStrategy {
+    boolean isExecutable(Order order, Money marketPrice);
+}
+class MarketOrder implements OrderTypeStrategy {
+    public boolean isExecutable(Order o, Money mkt) { return true; }
+}
+class LimitOrder implements OrderTypeStrategy {
+    public boolean isExecutable(Order o, Money mkt) {
+        return o.getSide() == Side.BUY
+             ? mkt.amount().compareTo(o.getLimitPrice().amount()) <= 0
+             : mkt.amount().compareTo(o.getLimitPrice().amount()) >= 0;
+    }
+}
+```
+
+New order type = new class, no `if/else` sprawl (Open/Closed Principle).
+
+### 12.6 Order Book (only if pushed toward the exchange side)
 
 ```java
 public class OrderBook {
-    // price level -> FIFO queue of orders (price-time priority)
+    // price level -> FIFO queue (price-time priority)
     private final TreeMap<BigDecimal, Deque<Order>> buys  =
         new TreeMap<>(Comparator.reverseOrder());   // highest bid first
     private final TreeMap<BigDecimal, Deque<Order>> sells =
@@ -518,7 +641,7 @@ public class OrderBook {
 }
 ```
 
-Key line: **price = TreeMap (sorted), time = Deque (FIFO) per price level, HashMap for O(1) cancel** — the classic price-time-priority structure. Match ≈ O(log P + fills).
+Key line: **price = TreeMap (sorted), time = Deque (FIFO) per level, HashMap for O(1) cancel.** Match ≈ O(log P + fills).
 
 Patterns to name-drop: **Strategy** (order types) · **State** (order status) · **Observer** (price ticks → subscribers) · **Factory** (create orders) · **Command** (place/cancel as auditable actions).
 
@@ -527,36 +650,38 @@ Patterns to name-drop: **Strategy** (order types) · **State** (order status) ·
 ## 13. Common Mistakes (say these to show maturity)
 
 1. Building a matching engine — a broker **routes**, it doesn't match.
-2. `double` for money → `BigDecimal` / integer cents.
-3. Deducting balance directly → use **hold → settle → release** + ledger.
-4. Polling the exchange for prices or order status → subscribe (stream in) + webhook (updates in).
-5. No idempotency → duplicate orders on network retry.
-6. Price ticks in the transactional DB → time-series DB, keep the firehose away from money.
-7. Same consistency everywhere → orders = strong consistency, price display = availability, slightly stale is fine.
-8. DB + Kafka dual write → **Transactional Outbox**.
-9. Trusting auto-scaling for market open → **pre-provision** warm servers; the spike is predictable.
+2. `double` for money → `BigDecimal` / integer yen.
+3. Debiting balance directly → **hold → settle → release** + ledger.
+4. Checking balance without holding → double-spend across two pending orders.
+5. No idempotency → duplicate orders / double charges on network retry.
+6. Price ticks in the transactional DB → time-series DB; keep the firehose away from money.
+7. DB + Kafka dual write → **Transactional Outbox**.
+8. 2PC across services → **Saga + compensation**.
+9. Reading spendable balance from the eventually-consistent portfolio → money-truth comes from the Wallet only.
+10. Trusting auto-scaling for market open → **pre-provision**; the spike is predictable.
+11. Forgetting audit/compliance — in fintech it's a foundation, not an add-on.
 
 ---
 
 ## 14. Self-Check Questions
 
-- Why is the broker's design different from the exchange's?
-- Which path gets consistency and which gets availability — and why?
-- A user opens the app at 11:00 — how do they see the chart AND live updates? (DB history + SSE)
-- Why SSE and not WebSocket? When *would* WebSocket be right?
-- Walk an order from tap to FILLED. Where does `exchange_order_id` appear?
-- Order has no `exchange_order_id` after 5 retries — what happens? (DLQ)
-- Two pending orders together overspend the wallet — what stops it? (hold + row lock)
-- Exchange sends the same fill webhook twice — what stops double credit? (idempotent consumer, execution-ID dedupe)
-- Market opens in 5 minutes — what did you do yesterday to prepare the infra? (pre-provisioned warm capacity)
-- Where do the 3 kinds of price data live? (latest → Redis, history → time-series DB, money → RDBMS)
+- Draw the full flow of a limit buy that partially fills, then the user cancels the rest. What happens to the held money at each step?
+- Two pending orders together would overspend the wallet — which two mechanisms prevent it? (hold model + row lock)
+- User opens the app at 11:00 — which three data sources build their price screen? (Redis latest + time-series chart + SSE stream)
+- Exchange rejects an order AFTER funds were held — what exactly runs? (Saga compensation → release)
+- Order Service committed but Kafka publish crashed — how is the event not lost? (outbox)
+- The same fill arrives twice — what stops a double credit? (execution-ID dedupe)
+- Why is Portfolio allowed to be eventually consistent but Wallet is not?
+- Why shard the Order/Wallet DB by user_id but partition price ticks by symbol?
+- The bank API times out for 10 minutes — describe the user experience. (circuit breaker, pending deposits, everything else works)
+- Which service is the ONLY one talking to the exchange, and why is that a rule?
 
 ---
 
 ## Sources
 
-- AlgoMaster mock interview — *Design a Stock Broker (Groww/Zerodha)* (YouTube) — primary structure of this note
 - [Design Robinhood — System Design Handbook](https://www.systemdesignhandbook.com/guides/design-robinhood/)
+- [Design a Stock Exchange System — System Design Handbook](https://www.systemdesignhandbook.com/guides/design-a-stock-exchange-system/)
 - [Groww Stock Broker System Design — GitHub (SunilGudivada)](https://github.com/SunilGudivada/Data-Structures-and-Algorithms/blob/main/system-design/stock-broker-system-design-groww.md)
 - [Design an Online Stock Brokerage System (OOD) — grokking-the-OOD-interview](https://github.com/tssovi/grokking-the-object-oriented-design-interview/blob/master/object-oriented-design-case-studies/design-an-online-stock-brokerage-system.md)
 - [Backend Engineer @ PayPay Securities — Japan Dev (tech stack)](https://japan-dev.com/jobs/paypay-securities/paypay-securities-backend-engineer-ljuyvo)

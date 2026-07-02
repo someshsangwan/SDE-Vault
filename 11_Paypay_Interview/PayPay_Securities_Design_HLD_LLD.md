@@ -568,3 +568,5 @@ public class OrderBook {
 - [Stock Exchange System Design — System Design Newsletter (Neo Kim)](https://newsletter.systemdesign.one/p/stock-exchange-system-design)
 - [Backend Engineer @ PayPay Securities — Japan Dev (tech stack)](https://japan-dev.com/jobs/paypay-securities/paypay-securities-backend-engineer-ljuyvo)
 - [PayPay Tech Talks vol.1 — PayPay Inside-Out (architecture)](https://insideout.paypay.ne.jp/en/2021/01/21/techtalks-vol1-en/)
+
+

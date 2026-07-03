@@ -1,31 +1,108 @@
 # PayPay Securities (PPSEC) — Technical Interview Prep (Detailed)
 
-> Compiled from Glassdoor, InterviewBit, LeetCode Discuss, Medium, and first-hand write-ups (gaijineer, HackMD, InterviewCat).
-> Most public interview data is for **PayPay** (the parent) — the process and question style are the same. The **Securities** twist: brokerage / stock order / ledger domain instead of P2P payments. Ground every example in *"a user buys a stock in the app"*.
-> Related notes: [[Paypay_general_question]] · [[My_Resume_Q&A]]
+### Background
+* **How it started**: PayPay Securities was first launched in 2016 under the name **One Tap BUY**. It was Japan's first app-only stock brokerage. In 2021, it was renamed to **PayPay Securities** to connect more closely with the PayPay payment app, which is backed by SoftBank and Yahoo Japan.
+* **Who it is for**: It is built for **first-time investors** — people who want to try investing but find traditional brokerages complicated or expensive.
+* **Mini-App inside PayPay**: You can use it as a standalone app, but the real advantage is that it also lives **inside the main PayPay app** as a mini-app. PayPay already has over 70 million users, so those users can start investing without creating a completely new account.
+
+### What users can do
+1. **Start with 100 Yen**: Users can buy Japanese or US stocks starting from just 100 Yen. This works because PayPay Securities handles fractional shares internally — so you don't need to buy a whole share.
+2. **Invest with PayPay Points**: Users can take the points they earn from shopping with PayPay and put them into a virtual fund. This is called **Point Investment (Point Unyo)**. It lets people get used to how the market works without spending real money.
+3. **Buy stocks directly from PayPay Wallet**: With a feature called **Leave-and-Buy (Omatase-Konyu)**, users can buy stocks using their PayPay Money or PayPay Bank balance — no need to transfer money to a separate brokerage account first.
+4. **US Stocks 24/7**: Users can buy US stocks like Apple or NVIDIA anytime, in Japanese Yen. No need to deal with currency exchange.
+5. **NISA support**: PayPay Securities supports Japan's tax-free investment program called **NISA**, so users can invest and save on taxes at the same time.
 
 ---
 
-## 0. What HR Actually Told You (read this first)
+## 2. The Fintech Industry in Japan
 
-> *"This will be a technical interview. The primary objective is to evaluate your foundational technical skills, specifically focusing on basic Computer Science concepts such as **databases, data structures, and algorithms**. There is also a possibility of a **live coding** session. We may also ask you to share your **reasons for applying to PPSEC**."*
+### Cashless Payments
+* Japan was traditionally a cash-first country. But things are changing fast. The government set a goal to bring the **cashless payment rate to 80%** — it is now at **58%**.
+* **QR code payments** like PayPay are growing the fastest. PayPay is the biggest player in this space, and merchants all over Japan now accept it.
+* PayPay has grown from just a payment app into a **Super-App** — it now covers payments, banking, insurance, investing, and more, all in one place.
 
-So the priority order for this round is:
+### The New NISA Program
+* Japanese households have over **2,000 trillion Yen** saved, but most of it is sitting in bank accounts earning almost no interest.
+* The government launched the **New NISA program in 2024** to encourage people to invest instead of just saving. It gives users a **tax-free** way to grow their money in stocks or mutual funds.
+* By the end of 2025, there were already **28 million NISA accounts**. This is a huge opportunity for investment apps like PayPay Securities.
 
-1. **Databases** (§2) — expect the most depth here, it's fintech.
-2. **Data Structures** (§3) — "how does X work under the hood" style.
-3. **Algorithms + Live Coding** (§4, §5) — LeetCode Easy→Medium in Java.
-4. **Why PPSEC** (§8) — have a 60–90 second answer ready.
+---
 
-Java/JVM (§6) and networking (§7) are secondary for *this* round but PayPay interviewers historically drift into them, so keep them warm. System design (§9) is likely a *later* round — skim it, don't cram it now.
+### 💡 Topic 1: Interview Q&A — The Fintech Industry
 
-### What is PayPay Securities? (know your target company)
+#### 1. One-Line Summary (Say this first)
+> *"Japan's Fintech industry is changing fast — people are moving from cash to digital payments, and from bank savings to stock investing. PayPay Securities is at the center of both of these changes."*
 
-- **PayPay Securities (PayPay証券 / "PPSEC")** is the **online stock brokerage** arm of the PayPay group. PayPay's ecosystem = PayPay app (payments), PayPay Card, PayPay Bank, and PayPay Securities — about **73 million registered app users** (as of March 2026).
-- Its pitch: **investing for beginners** — buy Japanese and US stocks in **small / fractional amounts** (from ~¥100 or ¥1,000) directly inside the PayPay app ("PayPay資産運用" — asset management mini-app). Deposits come straight from your PayPay balance, so the barrier to a first-ever stock purchase is tiny.
-- Parent **PayPay Corporation** is a SoftBank Group company and **listed on Nasdaq (ticker PAYP) in March 2026**, raising ~$880M — so the group is in aggressive-growth, "financial super-app" mode, and Securities is one of its growth engines.
-- Engineering reality behind that product: order placement, price feeds, fractional-share accounting, a money ledger, strict consistency, and Japan FSA-regulated audit requirements. That's why they grill **databases + transactions** so hard.
+#### 2. Key Points to Remember
+* Japan holds over **2,000 trillion Yen** in household savings, but most of it earns almost nothing. The New NISA (2024) is getting people to invest for the first time.
+* Cashless payments have reached **58%**. PayPay leads the QR payment market.
+* People now want one app for everything — paying, saving, investing. That's the Super-App model.
 
+#### 3. What to Say in the Interview
+> *"I think Japan's Fintech industry is going through a big change right now. In the past, Japan was very much a cash-first country — most people kept their money in a bank account or as cash at home. But two big things are happening at the same time now.*
+>
+> *First, the government is trying to push everyone toward cashless payments. Apps like PayPay have already helped bring the cashless rate up to nearly 60%. Second, the government launched the New NISA program in 2024, which gives people a tax-free way to invest money in stocks. This is making a lot of people try investing for the first time.*
+>
+> *For me as a backend engineer, this is a really exciting time. Fintech is not just about moving money — it's about making sure the data is always correct between the payment app and the investment account, handling millions of users at the same time, and making the system fast and reliable even when the stock market opens and traffic spikes. PayPay Securities is in a great position because it already has 70 million users from the PayPay app, and it can turn those everyday shoppers into investors."*
+
+#### 4. Follow-Up Questions They Might Ask
+
+* **Q: SBI Securities and Rakuten Securities are much bigger. Why is PayPay Securities competitive?**
+    * *A*: SBI and Rakuten are great for experienced investors who already know what they are doing. But PayPay Securities is going after a completely different group — people who have never invested before and find it scary or complicated. PayPay makes it simple: you can start with just 100 Yen, and you can even use your PayPay Points from daily shopping. No other broker can do this because they don't have a daily payment app with 70 million users behind them.
+
+* **Q: How does security matter in fintech from a backend engineer's point of view?**
+    * *A*: Security is the most important thing in fintech because we handle real people's money. As a backend engineer, I focus on four things: making sure only the right people can use the API, keeping sensitive user data like KYC information safe and encrypted, encrypting all data when it moves over the network or sits in the database, and keeping a complete record of every transaction so we can always check and fix anything that goes wrong.
+
+---
+
+## 3. PayPay's Work Culture
+
+PayPay is interesting because it works like a startup — fast, flat, and international — but it is backed by big companies like SoftBank and Yahoo Japan, so it also has resources and stability.
+
+### What makes the team special
+* **English is the main language**: The engineering and product teams all communicate in English, not Japanese. So it's easy to work here even if you don't speak Japanese.
+* **Engineers from 50+ countries**: PayPay hires globally. It feels more like a Silicon Valley tech company than a traditional Japanese firm.
+* **Work from anywhere**: PayPay lets engineers work from anywhere in Japan.
+
+### PayPay's 5 Core Values ("PayPay 5 Senses")
+Try to mention one or two of these in your behavioral answers:
+1. **Speed first**: Make decisions fast. Don't wait too long to get started.
+2. **No Ego**: Work together. Listen to other people's ideas. The team wins, not the individual.
+3. **Believe in the product**: Care about what you are building and the impact it has on users.
+4. **Be sincere and professional**: Especially important in fintech — do things properly and with integrity.
+5. **Find your purpose**: Take ownership. Don't just follow tickets — think about why you are building something.
+
+### Tech Stack (PayPay Securities)
+* **Backend**: Java with Spring Boot, Kotlin, Scala (used across different microservices)
+* **Infrastructure**: AWS + Kubernetes (using Argo CD for GitOps-style deployments)
+* **Databases**: **TiDB** (a distributed SQL database that scales horizontally), **Amazon Aurora MySQL**, **DynamoDB**, **Redis**
+* **Messaging**: **Apache Kafka** for sending events between services (like order placed, payment deducted, etc.)
+
+---
+
+### 💡 Topic 2: Interview Q&A — Startup Culture
+
+#### 1. One-Line Summary (Say this first)
+> *"Startup culture means moving fast, taking full ownership of your work, and communicating openly — without waiting for top-down approval for every small decision."*
+
+#### 2. Key Points to Remember
+* Ship fast, get feedback, fix and improve — don't plan for months before doing anything.
+* Talk directly to your teammates. Don't hide behind tickets and Jira.
+* You are responsible for the full system — not just your small piece.
+* PayPay's values: **Speed**, **No Ego**, **Ownership**.
+
+#### 3. What to Say in the Interview
+> *"For me, startup culture is not about the free snacks or the cool office — it's about how you actually work. It means you move quickly, you don't wait for someone to give you all the answers, and you feel real ownership over the things you build.*
+>
+> *I really like PayPay's values — especially 'No Ego' and 'Speed as Priority'. In my experience at Rakuten Pay, the best results came when the team talked to each other directly, shared ideas openly, and focused on solving the user's problem rather than following a long chain of approvals. At PayPay Securities, I would get to work with engineers from over 50 countries, all using English. That kind of environment is where I do my best work. And because PayPay is backed by SoftBank, we also get the stability and the resources of a big company — so it's really the best of both worlds."*
+
+#### 4. Follow-Up Questions They Might Ask
+
+* **Q: How do you move fast without breaking things in a financial app?**
+    * *A*: Moving fast doesn't mean being careless. If we invest time upfront in writing good tests and setting up automated CI/CD pipelines, then we can deploy often and safely. We catch bugs before they reach production. And for high-risk changes, we use canary releases — we roll out to a small group of users first and watch for errors before deploying to everyone.
+
+* **Q: Tell me about a time you dealt with unclear requirements.**
+    * *A*: This happened at Rakuten Pay. We had to integrate a new payment method, but the specs from the product side were not fully ready yet. Instead of waiting, I wrote a simple API contract based on what I understood, shared it with the frontend team so they could build a mock, and raised the unclear parts with the product owner directly. Because of this, we caught issues early and saved at least two weeks of rework later.
 ---
 
 ## 1. The Interview Process (from a first-hand LeetCode write-up)
@@ -637,16 +714,33 @@ Bonus mentions: CDN, connection keep-alive, HTTP/2 multiplexing.
 
 ## 8. Why PPSEC? ⭐ (HR explicitly said they'll ask — script it)
 
-Structure it Japan-style: **conclusion → reasons → example → conclusion**, 60–90 seconds. Build from these true ingredients:
+### 💡 Topic 3: Interview Q&A — Reasons to Apply
 
-1. **Domain continuity, one step deeper:** *"At Rakuten Pay I've spent two years building payment backends in Java/Spring Boot — money movement, idempotency, transactional correctness. Securities is the same discipline with the bar raised: orders against a moving market, ledgers, settlement, regulatory audit. It's the natural next depth level for my exact skill set."*
-2. **Mission you can honestly endorse:** PPSEC's whole product is **lowering the barrier to investing** for ordinary people in Japan — fractional US/JP stocks from tiny amounts, right inside an app 73M+ people already use, in a country pushing household savings toward investment (new NISA). If that genuinely resonates, say it plainly.
-3. **Growth-stage engineering:** the PayPay group just listed on **Nasdaq (PAYP, March 2026)** and is building out the "financial super-app" — payments + card + bank + securities. Joining Securities now = building core systems while they scale, not maintaining finished ones.
-4. **Why leave Rakuten Pay?** (the implicit twin question — never badmouth): *"Rakuten Pay taught me production payments engineering. I'm not leaving payments — I'm moving to the part of fintech I want to go deep in: investment infrastructure, and PPSEC is where that's being built at scale in Japan."*
+#### 1. One-Line Summary (Say this first)
+> *"I want to join PayPay Securities because I enjoy solving hard backend problems around money and data consistency, and I want to work in a global team where English is the language and the product has a real impact on people's lives."*
 
-Also prepare **reverse questions** (you'll be asked "any questions for us?"): e.g. *"How is the boundary drawn between PPSEC's backend and the main PayPay app for the 資産運用 flow?"* / *"What does the team own end-to-end — order path, ledger, market data?"* / *"How do engineers here handle FSA-driven requirements — is compliance a separate team or built into the dev process?"* These show you researched the *Securities* business specifically, not just PayPay.
+#### 2. Key Points to Remember
+* **Technical challenge**: Managing money and stock data across two systems (payment and investment) is a hard consistency problem — exactly the kind I enjoy solving.
+* **Product impact**: Helping normal people invest for the first time with just 100 Yen is a meaningful goal.
+* **The team**: English-first, international, modern tech stack (Java, Kafka, TiDB).
 
----
+#### 3. What to Say in the Interview
+> *"I have three main reasons for applying to PayPay Securities.*
+>
+> *The first reason is the technical challenge. PayPay Securities connects a payment app with a stock investment service — and making these two systems work together smoothly is a really hard problem. For example, when a user buys stock, we need to take money from their PayPay wallet and update their investment account at exactly the same time. If anything fails in the middle, we need to roll it back safely. This kind of problem — using things like Kafka and the Saga pattern — is exactly what I enjoy working on.*
+>
+> *The second reason is the product itself. I think it is really meaningful to help regular people start investing. Most people in Japan keep their money in a bank account earning almost no interest. PayPay Securities lets you start investing with just 100 Yen. That is a simple but powerful idea, and I want to be part of building the system that makes it work.*
+>
+> *The third reason is the team. PayPay Securities works in English and has engineers from all over the world. I want to grow in that kind of environment, learn from different people, and contribute my Java and system design experience to a team building something that really matters."*
+
+#### 4. Follow-Up Questions They Might Ask
+
+* **Q: Why backend and not frontend or data science?**
+    * *A*: I like backend because it is where real trust is built in fintech. If the frontend has a bug, a user might see a wrong color or a layout issue — that's fixable. But if the backend records a transaction wrong, a user could lose money, or the company could have a serious compliance problem. I enjoy working on database design, writing safe APIs, and making sure money always goes to the right place.
+
+* **Q: Where do you see yourself in 3 years?**
+    * *A*: In 3 years, I want to be someone the team trusts for important system decisions. I want to own a key service — maybe the transaction ledger or the order processing service — and keep improving it over time. I also want to help new engineers, especially people from outside Japan, to join the team and feel comfortable quickly.
+
 
 ## 9. System Design (likely a LATER round — skim now, cram after you pass this one)
 

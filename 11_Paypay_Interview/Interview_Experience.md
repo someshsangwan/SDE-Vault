@@ -105,15 +105,44 @@ You *cannot* put `SUM(...) > 1000000` in WHERE — the sum doesn't exist yet at 
 Baby version: DELETE = erasing lines from a notebook page. TRUNCATE = ripping the page out. DROP = throwing the notebook away.
 
 **Q: What is normalization? And why would you ever denormalize?**
-**Normalization** = organizing tables so each fact is stored **exactly once**, to avoid update anomalies. The first three normal forms, simply:
 
-- **1NF:** every cell holds one value — no comma-separated lists. (Not `symbols = "AAPL,TSLA"` in one column; one row per holding.)
-- **2NF:** every non-key column depends on the *whole* primary key. If the PK is `(account_id, symbol)`, don't also store `account_owner_name` there — it depends only on `account_id`, so it belongs in `accounts`.
-- **3NF:** non-key columns don't depend on *other non-key columns*. Don't store both `symbol` and `company_name` in `orders` — `company_name` depends on `symbol`, so it belongs in a `stocks` table.
+The whole idea in one line: **normalization = don't write the same fact in two places.** The normal forms (1NF/2NF/3NF) are just three checks that catch three different ways facts get accidentally duplicated.
 
-Why it matters: if `company_name` is copied into a million order rows and the company renames itself, you must update a million rows and might miss some → inconsistent data.
+**Start with a badly designed table** — everything about orders in one place:
 
-**Denormalization** = deliberately re-copying data to make reads faster (fewer JOINs). Example: store a precomputed `portfolio_value` on the account instead of summing holdings on every screen load. Trade-off: faster reads, but now you must keep the copy in sync. Rule of thumb: **normalize for correctness first, denormalize only for a measured read bottleneck.**
+| order_id | account_id | owner_name | symbol | company_name | qty |
+|---|---|---|---|---|---|
+| 1 | 42 | Somesh | AAPL | Apple Inc | 2 |
+| 2 | 42 | Somesh | TSLA | Tesla Inc | 1 |
+| 3 | 42 | Somesh | AAPL | Apple Inc | 5 |
+| 4 | 77 | Kenji | AAPL | Apple Inc | 3 |
+
+"Account 42 = Somesh" is written 3 times; "AAPL = Apple Inc" is written 3 times. Copied facts cause three real bugs:
+
+1. **Update anomaly:** Apple renames itself → you must update *every* row saying "Apple Inc". Miss one row and the DB now says AAPL is two different companies.
+2. **Insert anomaly:** you can't add a new stock "SONY = Sony Group" until *someone orders it* — there's no row to put the fact in.
+3. **Delete anomaly:** Kenji cancels order 4 → deleting that row also erases your only record that account 77 = Kenji. Deleting an order shouldn't delete a customer.
+
+The cure for all three: **each fact lives once, in its own table**, referenced by ID: `accounts(account_id, owner_name)` · `stocks(symbol, company_name)` · `orders(order_id, account_id, symbol, qty)`. Apple renaming = update **1 row** in `stocks`. Nothing can go out of sync because there are no copies.
+
+**The three normal forms — each is one check:**
+
+- **1NF — one value per cell.** Not `symbols = "AAPL,TSLA,SONY"` in one column — the DB can't search/index/count inside a string blob (`WHERE symbol='TSLA'` fails). Fix: one row per value.
+- **2NF — every column must describe the *whole* key, not just part of it.** Only matters with a **composite PK**. In `holdings` with PK `(account_id, symbol)`: `qty` needs *both* parts (qty of which stock, for which account ✅), but `owner_name` is known from `account_id` alone — it describes half the key, gets duplicated once per symbol, and belongs in `accounts` ❌.
+- **3NF — a non-key column must not describe another non-key column.** In `orders`, `company_name` doesn't describe *the order* — it describes `symbol` (another non-key column). It's hitching a ride; move it to `stocks`. (This is exactly the update-anomaly bug above.)
+
+Memory trick: every column depends on **"the key, the whole key (2NF), and nothing but the key (3NF)."**
+
+**Why denormalize, then?** Because normalized data is scattered, and reading it back needs **JOINs + calculation**. Real case: the PPSEC home screen shows *"Your portfolio: ¥1,234,567"* — computed properly that's `holdings` JOIN `prices`, multiply, sum — for every user on every app open. Millions of opens/day × a multi-table aggregation = DB on fire.
+
+**Denormalization** = deliberately breaking "store once" for speed: keep a precomputed copy (`accounts.portfolio_value`) and read one column. The price: **you created a duplicate, so YOU must keep it in sync** on every trade/price change — the exact burden normalization removed. Buggy sync = wrong portfolio number on screen.
+
+| | Normalized | Denormalized |
+|---|---|---|
+| Writes | easy, always correct | must update every copy |
+| Reads | slower (JOINs) | fast (precomputed) |
+
+Interview-ready rule: **design normalized first — correctness by default; denormalize only for a *measured* read bottleneck, and treat the copy as a cache that must be kept in sync (or rebuilt periodically).**
 
 ---
 

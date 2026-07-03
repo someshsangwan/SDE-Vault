@@ -306,7 +306,37 @@ Run `EXPLAIN <query>` — the DB shows its plan: full scan or index? which index
 - Honest framing: it's not either/or — a brokerage uses PostgreSQL/MySQL for money **and** Redis for hot quotes **and** maybe Cassandra/ClickHouse for tick history.
 
 **Q: What is the N+1 problem?** (JPA/Hibernate — you use Spring, they may probe)
-You load 100 accounts (1 query), then access `account.getOrders()` on each — lazy loading fires **100 more queries**. 1+N total, and the DB dies a death of a thousand cuts. Fix: fetch in one go — `JOIN FETCH` in JPQL, `@EntityGraph`, or batch fetching. Detect it by logging SQL in dev and watching for repeated identical queries.
+
+Setup: `Account` has `@OneToMany List<Order> orders` — **LAZY by default**, meaning JPA loads the account but puts a *placeholder (proxy)* in `orders` and only queries them if the list is actually touched.
+
+The innocent-looking code that explodes:
+
+```java
+List<Account> accounts = accountRepository.findAll();   // query #1
+for (Account a : accounts) {
+    a.getOrders().size();   // touches the lazy list → fires 1 query PER account
+}
+```
+
+What SQL actually runs for 100 accounts:
+
+```sql
+SELECT * FROM accounts;                       -- 1 query for the parents
+SELECT * FROM orders WHERE account_id = 1;    -- then N queries, one per child list
+SELECT * FROM orders WHERE account_id = 2;
+-- ... ×100
+```
+
+**1 + N = 101 queries.** The cost isn't each tiny query — it's 101 **network round trips** (even 2ms each ≈ 200ms of pure travel) and 101 hits on the DB for data that fits in one. Konbini analogy: walking to the store **100 times buying one item per trip** instead of going once with a list. Sneaky because it scales with *data*, not code: 5 test accounts in dev = 6 queries (unnoticed); 10,000 in prod = 10,001 (meltdown).
+
+**Fixes (all = "go once with a list"):**
+1. **`JOIN FETCH`** — `@Query("SELECT a FROM Account a LEFT JOIN FETCH a.orders")` → one SQL join, 101 → 1.
+2. **`@EntityGraph(attributePaths = "orders")`** on the repository method — same effect, annotation style.
+3. **Batch fetching** — `hibernate.default_batch_fetch_size=50` → lazy loads become `WHERE account_id IN (1,...,50)`, 101 → 3. Good global safety net.
+
+**Not a fix: `FetchType.EAGER`** — that means "always fetch orders even when unneeded" (a different perf bug) and can still N+1 on some query paths. Keep LAZY as default, fetch explicitly where needed — *say this, it's a strong signal.*
+
+**Detection:** enable SQL logging in dev (`spring.jpa.show-sql=true` / `org.hibernate.SQL=DEBUG`), hit the endpoint once — a **wall of near-identical SELECTs differing only in the ID** is the N+1 signature.
 
 **Q: What is a deadlock in the DB and how do you handle it?**
 Txn A locks row 1 and wants row 2; txn B locks row 2 and wants row 1 — both wait forever. The DB detects the cycle and **kills one** (you get a deadlock exception). Prevention: lock rows in a **consistent global order** (e.g., always lower account_id first in a transfer), keep transactions short, index your WHERE clauses so you lock rows not ranges. Handling: catch and **retry** the victim transaction — deadlock errors are expected noise in a busy OLTP system, not a crash.

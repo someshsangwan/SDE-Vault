@@ -179,29 +179,56 @@ If the server crashes after the first UPDATE but before COMMIT, the user must **
 
 ### 2.2 Isolation levels & anomalies (know this cold — it's *the* PayPay question)
 
-First understand the three **anomalies** (bugs caused by concurrency), each as a story with two people:
+**One running example for everything** (your Rakuten Pay day job — reuse it in the interview):
 
-**Dirty read** — *reading someone's unsaved draft.*
-Transaction A updates a stock price to ¥500 but hasn't committed. Transaction B reads ¥500 and shows it to a user. A then rolls back — ¥500 *never officially existed*, but B acted on it. B read "dirty" (uncommitted) data.
+- **T1 (the transfer):** user A sends ¥5,000 to user B, one transaction: ① `A.balance − 5000` ② `B.balance + 5000` ③ COMMIT (or ROLLBACK on failure).
+- **T2 (a reader):** something else reading those balances at the same moment — balance screen, fraud check, compliance report.
 
-**Non-repeatable read** — *the same row changes between your two looks.*
-Transaction B reads account 42's balance: ¥10,000. Meanwhile transaction A commits a deposit. B reads the *same row* again inside the *same transaction*: now ¥50,000. B's two reads disagree — it can't "repeat" its read. Bad when B is doing math across multiple reads (e.g., a risk check then a debit).
+All three **anomalies** are just different ways T2 sees something weird because T1 was running at the same time. That's the entire topic.
 
-**Phantom read** — *the same query returns different rows.*
-Transaction B runs `SELECT COUNT(*) FROM orders WHERE symbol='AAPL'` → 10 rows. A commits a *new* AAPL order. B reruns the identical query → 11 rows. No existing row changed — a **new row appeared like a phantom**. (Non-repeatable = a row's *values* changed; phantom = the *set of rows* changed.)
+**Bug 1 — Dirty read:** *T2 sees T1's unfinished work.* (Start: A = ¥10,000, B = ¥0)
 
-Now the four **isolation levels** — each one is just "which anomalies do I tolerate in exchange for speed":
+| Time | T1 (transfer) | T2 (reader) |
+|---|---|---|
+| 1 | A → 5,000 (not committed) | |
+| 2 | B → 5,000 (not committed) | |
+| 3 | | reads B → **sees ¥5,000** |
+| 4 | ❌ fails → **ROLLBACK** (B back to ¥0) | |
 
-| Level | Dirty read | Non-repeatable read | Phantom read | Plain-English behavior |
+T2 saw money in B's account that **never officially existed**. If T2 was a "can B afford this?" check, it approved a purchase against phantom money. Dirty = reading **uncommitted** data that might still be undone.
+
+**Bug 2 — Non-repeatable read:** *T2 reads the same row twice, gets two answers.* T2 = fraud check: read A's balance, think, read again.
+
+| Time | T1 (transfer) | T2 (fraud check) |
+|---|---|---|
+| 1 | | reads A.balance → **¥10,000** |
+| 2 | deducts 5,000, **COMMIT** ✅ | |
+| 3 | | reads A.balance again (same txn) → **¥5,000** |
+
+Note: T1 committed properly — no dirty data anywhere — yet T2 is still broken: within one transaction the same row gave two different values. Deadly for check-then-act logic ("verify balance covers the fee → deduct fee" — the world changed in between).
+
+**Bug 3 — Phantom read:** *the same query returns a different SET of rows.* T2 = compliance job checking "has A exceeded 10 transfers today?"
+
+| Time | T1 (transfer) | T2 (compliance) |
+|---|---|---|
+| 1 | | `SELECT COUNT(*) FROM transfers WHERE sender='A' AND date=today` → **10 rows** |
+| 2 | inserts a **new** transfer row, **COMMIT** ✅ | |
+| 3 | | identical query again → **11 rows** 👻 |
+
+No existing row changed — a **brand-new row appeared like a ghost**. Keep bugs 2 & 3 apart: **non-repeatable = an existing row's *values* changed; phantom = the *number of matching rows* changed** (insert/delete). DBs prevent them with different machinery, which is why they're listed separately.
+
+**The four isolation levels = how sealed T2's room is while it works:**
+
+| Level | Dirty read | Non-repeatable read | Phantom read | Picture |
 |---|---|---|---|---|
-| Read Uncommitted | ❌ possible | ❌ possible | ❌ possible | You can see others' uncommitted work. Almost never used. |
-| Read Committed | ✅ prevented | ❌ possible | ❌ possible | You only see committed data, but re-reads may differ. **PostgreSQL/Oracle default.** |
-| Repeatable Read | ✅ prevented | ✅ prevented | ❌ possible* | Snapshot of the data when your txn started; your reads are stable. **MySQL InnoDB default** (*InnoDB actually blocks most phantoms too, via gap locks — nice bonus point to mention). |
-| Serializable | ✅ prevented | ✅ prevented | ✅ prevented | As if transactions ran strictly one-by-one. Safest, slowest. |
+| Read Uncommitted | ❌ possible | ❌ possible | ❌ possible | *Glass walls* — you see everyone's work-in-progress, even work that gets erased. Nobody uses this. |
+| Read Committed | ✅ prevented | ❌ possible | ❌ possible | *Only finished work visible* — but each read is a **fresh look at the live DB**, so between two looks the world can change. **PostgreSQL/Oracle default.** |
+| Repeatable Read | ✅ prevented | ✅ prevented | ❌ possible* | *You get a photograph* — a **snapshot** of the data taken when your txn started; all your reads come from that photo, so others' commits don't disturb you. **MySQL InnoDB default** (*InnoDB actually blocks most phantoms too via gap locks — nice bonus point). |
+| Serializable | ✅ prevented | ✅ prevented | ✅ prevented | *Everyone queues up* — result is as if transactions ran strictly one-by-one. Safest, slowest (DB blocks/aborts to guarantee it). |
 
-The trade-off in one sentence: **higher isolation = more correctness, less concurrency (more locking/waiting)**. Fintech pattern: run the system at Read Committed / Repeatable Read for throughput, and protect the *money-critical paths* with explicit locking or Serializable.
+Why not always Serializable? **Safety costs speed** — more isolation = more blocking/waiting = fewer transactions per second. Fintech pattern: run at Read Committed / Repeatable Read for throughput, and protect the *money-critical steps* with explicit locks (`SELECT ... FOR UPDATE`, §2.3) or Serializable — transfer path bulletproof, everything else fast.
 
-**How the DB implements this (bonus depth):** modern DBs use **MVCC** (Multi-Version Concurrency Control) — instead of blocking readers, the DB keeps old versions of rows, and each transaction reads the version that was current at its snapshot time. That's why "readers don't block writers and writers don't block readers" in PostgreSQL/InnoDB.
+**How the DB implements this (bonus depth):** **MVCC** (Multi-Version Concurrency Control) — instead of making readers wait while a writer works, the DB **keeps old versions of rows**; each transaction reads the version that was current at its snapshot time (readers look at the old photo while writers create the new one). That's why "readers don't block writers and writers don't block readers" in PostgreSQL/InnoDB.
 
 ---
 

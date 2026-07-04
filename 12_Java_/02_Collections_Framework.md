@@ -474,7 +474,195 @@ set.contains(new Point(1, 2));   // FALSE if hashCode not overridden!
 
 ---
 
-## 13. Common pitfalls & trick questions
+## 13. DSA Cheat Sheet — methods & iteration for every collection
+
+> The muscle-memory section: what you actually type in a LeetCode solution.
+
+### ArrayList
+```java
+List<Integer> list = new ArrayList<>();
+list.add(5);                 // append           O(1)*
+list.add(0, 5);              // insert at index  O(n)
+list.get(i);                 // read             O(1)
+list.set(i, 99);             // overwrite        O(1)
+list.remove(list.size()-1);  // remove BY INDEX  O(1) at end, O(n) middle
+list.remove(Integer.valueOf(5)); // remove BY VALUE (first match)
+list.contains(5);            // O(n)
+list.indexOf(5);             // O(n), -1 if absent
+list.size();  list.isEmpty();
+list.sort(null);                             // natural order (or Collections.sort(list))
+list.sort(Comparator.reverseOrder());        // desc
+Collections.reverse(list);  Collections.max(list);  Collections.min(list);
+```
+**Iterate:**
+```java
+for (int x : list) { ... }                    // for-each (read-only)
+for (int i = 0; i < list.size(); i++) { list.get(i); }   // with index
+for (int i = list.size() - 1; i >= 0; i--) { ... }        // backwards
+list.removeIf(x -> x % 2 == 0);               // remove while "iterating"
+```
+
+### HashMap (frequency counting = 80% of map usage in DSA)
+```java
+Map<Character, Integer> map = new HashMap<>();
+map.put('a', 1);
+map.get('a');                        // null if absent!
+map.getOrDefault('a', 0);            // the DSA workhorse
+map.merge('a', 1, Integer::sum);     // count in one call
+map.containsKey('a');  map.containsValue(1);
+map.remove('a');
+map.size();  map.isEmpty();
+map.computeIfAbsent('a', k -> new ArrayList<>()).add(x);  // map of lists (graph adjacency!)
+
+// The frequency-count idiom:
+for (char c : s.toCharArray())
+    map.merge(c, 1, Integer::sum);   // or: map.put(c, map.getOrDefault(c, 0) + 1);
+```
+**Iterate (3 ways):**
+```java
+for (Map.Entry<Character, Integer> e : map.entrySet())   // keys + values (preferred)
+    System.out.println(e.getKey() + " -> " + e.getValue());
+
+for (char key : map.keySet()) { ... }                    // keys only
+for (int value : map.values()) { ... }                   // values only
+```
+
+### HashSet
+```java
+Set<Integer> set = new HashSet<>();
+set.add(5);                  // returns false if already present (dedup check for free!)
+set.contains(5);             // O(1) — the whole point
+set.remove(5);
+set.size();  set.isEmpty();
+Set<Integer> seen = new HashSet<>(list);   // dedup a list in one line
+```
+**Iterate:**
+```java
+for (int x : set) { ... }    // no order guaranteed (LinkedHashSet keeps insertion order)
+```
+
+### Stack (LIFO)
+```java
+Deque<Integer> stack = new ArrayDeque<>();   // or: Stack<Integer> stack = new Stack<>();
+stack.push(5);               // add on top
+stack.pop();                 // remove + return top
+stack.peek();                // look at top (no remove)
+stack.isEmpty();  stack.size();
+
+// The monotonic-stack skeleton (next greater element, daily temperatures…):
+for (int i = 0; i < n; i++) {
+    while (!stack.isEmpty() && arr[stack.peek()] < arr[i])
+        res[stack.pop()] = i;                // resolve
+    stack.push(i);                            // store INDEX, not value
+}
+```
+**Iterate:** usually you don't — you drain it:
+```java
+while (!stack.isEmpty()) { int top = stack.pop(); ... }
+```
+
+### Queue (FIFO) — BFS
+```java
+Queue<TreeNode> q = new LinkedList<>();      // or new ArrayDeque<>()
+q.offer(root);               // enqueue at tail
+q.poll();                    // dequeue from head (null if empty)
+q.peek();                    // look at head
+q.isEmpty();  q.size();
+
+// The level-order BFS skeleton (memorize):
+while (!q.isEmpty()) {
+    int levelSize = q.size();                // freeze size BEFORE the inner loop!
+    for (int i = 0; i < levelSize; i++) {
+        TreeNode node = q.poll();
+        if (node.left  != null) q.offer(node.left);
+        if (node.right != null) q.offer(node.right);
+    }
+}
+```
+
+### Deque (both ends) — sliding window maximum
+```java
+Deque<Integer> dq = new ArrayDeque<>();
+dq.offerFirst(x);  dq.offerLast(x);          // add front / back
+dq.pollFirst();    dq.pollLast();            // remove front / back
+dq.peekFirst();    dq.peekLast();            // look front / back
+
+// Monotonic deque for sliding window max (stores indices):
+for (int i = 0; i < n; i++) {
+    if (!dq.isEmpty() && dq.peekFirst() <= i - k) dq.pollFirst();   // out of window
+    while (!dq.isEmpty() && arr[dq.peekLast()] < arr[i]) dq.pollLast(); // smaller = useless
+    dq.offerLast(i);
+    if (i >= k - 1) res[i - k + 1] = arr[dq.peekFirst()];
+}
+```
+
+### PriorityQueue (heap) — top-K, k-th largest, merge k lists
+```java
+Queue<Integer> minHeap = new PriorityQueue<>();
+Queue<Integer> maxHeap = new PriorityQueue<>(Comparator.reverseOrder());
+Queue<int[]> byFirst   = new PriorityQueue<>((a, b) -> Integer.compare(a[0], b[0])); // pairs by first elem — not a[0]-b[0] (overflow, §10)
+minHeap.offer(5);
+minHeap.poll();              // remove + return SMALLEST
+minHeap.peek();              // look at smallest
+minHeap.isEmpty();  minHeap.size();
+
+// Top-K pattern: keep a min-heap of size k
+for (int x : nums) {
+    minHeap.offer(x);
+    if (minHeap.size() > k) minHeap.poll();  // evict smallest → heap holds the K largest
+}
+```
+**Iterate:** never for-each (order is heap order, not sorted!) — **drain it**:
+```java
+while (!minHeap.isEmpty()) { int x = minHeap.poll(); ... }   // ascending order out
+```
+
+### TreeMap / TreeSet — sorted + range queries
+```java
+TreeMap<Integer, String> tm = new TreeMap<>();
+tm.firstKey();  tm.lastKey();                // min / max key
+tm.floorKey(x);   // greatest key <= x   (null if none)
+tm.ceilingKey(x); // smallest key >= x
+tm.lowerKey(x);   // strictly <          tm.higherKey(x);  // strictly >
+tm.floorEntry(x); // same but returns Map.Entry
+tm.pollFirstEntry();                         // remove + return min entry
+
+TreeSet<Integer> ts = new TreeSet<>();
+ts.first();  ts.last();  ts.floor(x);  ts.ceiling(x);
+ts.pollFirst();  ts.pollLast();              // heap-like usage but with O(log n) contains/remove
+```
+**Iterate:** for-each gives **ascending sorted order**; `ts.descendingSet()` / `tm.descendingMap()` for reverse.
+
+### Arrays & Strings (the constant companions)
+```java
+int[] arr = new int[n];
+Arrays.sort(arr);                            // O(n log n) — primitives: dual-pivot quicksort
+Arrays.fill(arr, -1);
+Arrays.sort(pairs, (a, b) -> Integer.compare(a[0], b[0])); // sort int[][] by column (objects: TimSort)
+int idx = Arrays.binarySearch(arr, target);  // must be sorted; negative if absent
+
+char[] cs = s.toCharArray();                 // iterate a string
+s.charAt(i);  s.length();  s.substring(l, r);  // substring: [l, r) — r exclusive!
+int[] freq = new int[26];
+freq[c - 'a']++;                             // char frequency — faster than HashMap for a-z
+
+StringBuilder sb = new StringBuilder();      // NEVER concat strings in a loop (O(n²))
+sb.append(x);  sb.reverse();  sb.deleteCharAt(sb.length()-1);  sb.toString();
+```
+
+### Conversions you always forget
+```java
+List<Integer> list = new ArrayList<>(Arrays.asList(1, 2, 3));  // literal → mutable list
+int[] arr2 = list.stream().mapToInt(Integer::intValue).toArray();  // List<Integer> → int[]
+List<Integer> l2 = Arrays.stream(arr).boxed().collect(Collectors.toList()); // int[] → List
+String s2 = new String(cs);                   // char[] → String
+List<int[]> res = new ArrayList<>();
+return res.toArray(new int[res.size()][]);    // List<int[]> → int[][] (interval problems)
+```
+
+---
+
+## 14. Common pitfalls & trick questions
 
 1. **`Arrays.asList(...)` is fixed-size** — `add`/`remove` throw `UnsupportedOperationException` (it's a view over the array; `set` works). Wrap it: `new ArrayList<>(Arrays.asList(...))`.
 2. **`List.of(...)` / `Map.of(...)` (Java 9+) are fully immutable** — even `set` throws. Also reject nulls.

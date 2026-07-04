@@ -56,16 +56,18 @@ pool.submit(task);
 
 ## 3. Thread Lifecycle (the states)
 
-```
-NEW ──start()──► RUNNABLE ◄──────────────┐
-                   │  ▲                  │
-        waiting for│  │lock acquired     │ notify()/timeout
-        a lock     ▼  │                  │
-                 BLOCKED    WAITING / TIMED_WAITING
-                   │            ▲
-                   │   wait(), join(), sleep(ms)
-                   ▼
-              TERMINATED  (run() finished)
+```mermaid
+stateDiagram-v2
+    [*] --> NEW: thread created
+    NEW --> RUNNABLE: start()
+    RUNNABLE --> BLOCKED: needs a synchronized lock held by another thread
+    BLOCKED --> RUNNABLE: lock acquired
+    RUNNABLE --> WAITING: wait() or join()
+    WAITING --> RUNNABLE: notify() or notifyAll()
+    RUNNABLE --> TIMED_WAITING: sleep(ms) or wait(ms) or join(ms)
+    TIMED_WAITING --> RUNNABLE: timeout or notify()
+    RUNNABLE --> TERMINATED: run() finishes
+    TERMINATED --> [*]
 ```
 
 | State | Meaning |

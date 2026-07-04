@@ -221,16 +221,30 @@ Queue<Integer> maxHeap = new PriorityQueue<>(Comparator.reverseOrder());
 ## 6. ★★★ HashMap Internals — THE interview topic ★★★
 
 ### The structure (Java 8+)
+```mermaid
+graph LR
+    subgraph TBL["table: Node array, length always power of 2 (default 16)"]
+        direction TB
+        B0["bucket 0"]
+        B1["bucket 1"]
+        B2["bucket 2"]
+        B3["..."]
+        B15["bucket 15"]
+    end
+
+    B1 --> N1["Node A"]
+    B2 --> N2["Node B"] --> N3["Node C"] --> N4["Node D"]
+    N4 -.->|"chain length > 8 → becomes Red-Black TREE"| RBT(("RB tree"))
+
+    classDef bucket fill:#e8f0fe,stroke:#4285f4;
+    classDef node fill:#e6f4ea,stroke:#34a853;
+    classDef tree fill:#fce8e6,stroke:#ea4335;
+    class B0,B1,B2,B3,B15 bucket;
+    class N1,N2,N3,N4 node;
+    class RBT tree;
 ```
-table (Node<K,V>[], length always a power of 2, default 16)
- ┌────┬────┬────┬────┬────┬────┐
- │ 0  │ 1  │ 2  │ 3  │ …  │ 15 │   ← "buckets"
- └────┴─┬──┴────┴─┬──┴────┴────┘
-        │         │
-      Node      Node ── Node ── Node        ← collision → linked list
-                  (list length > 8 → Red-Black TREE)
-```
-Each `Node` = `{int hash, K key, V value, Node next}`.
+- Empty buckets (0, 15) hold `null`. Bucket 1 has one entry; bucket 2 shows a **collision chain** (linked list).
+- Each `Node` = `{int hash, K key, V value, Node next}`.
 
 ### `put(key, value)` — step by step (narrate this exact flow)
 1. **Hash:** compute `key.hashCode()`, then **spread** it: `h ^ (h >>> 16)` — XORs the high 16 bits into the low 16.

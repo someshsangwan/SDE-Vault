@@ -10,27 +10,54 @@
 
 Two separate trees. **`Map` is NOT a `Collection`** (a Map holds pairs, not single elements) — classic trick question.
 
+```mermaid
+graph TD
+    subgraph CT["COLLECTION TREE"]
+        Iterable([Iterable]) --> Collection([Collection])
+        Collection --> List([List])
+        Collection --> Set([Set])
+        Collection --> Queue([Queue])
+        List --> ArrayList
+        List --> LinkedList
+        List --> Vector["Vector ⚠️ legacy"]
+        Vector --> Stack["Stack ⚠️ legacy"]
+        Set --> HashSet
+        Set --> LinkedHashSet
+        Set --> TreeSet
+        Queue --> PriorityQueue
+        Queue --> Deque([Deque])
+        Deque --> ArrayDeque
+        Deque -.-> LinkedList
+    end
+
+    subgraph MT["MAP TREE (separate hierarchy)"]
+        Map([Map]) --> HashMap
+        Map --> LinkedHashMap
+        Map --> TreeMap
+        Map --> ConcurrentHashMap
+    end
+
+    classDef iface fill:#e8f0fe,stroke:#4285f4,stroke-width:2px;
+    classDef impl fill:#e6f4ea,stroke:#34a853,stroke-width:1px;
+    classDef legacy fill:#fce8e6,stroke:#ea4335,stroke-width:1px;
+    class Iterable,Collection,List,Set,Queue,Deque,Map iface;
+    class ArrayList,LinkedList,HashSet,LinkedHashSet,TreeSet,PriorityQueue,ArrayDeque,HashMap,LinkedHashMap,TreeMap,ConcurrentHashMap impl;
+    class Vector,Stack legacy;
 ```
-              Iterable
-                 │
-             Collection                          Map
-        ┌────────┼────────┐               ┌───────┼──────────┐
-      List      Set     Queue          HashMap  TreeMap  LinkedHashMap
-        │        │        │               │
-  ┌─────┼───┐ ┌──┼──────┐ ├─ PriorityQueue└─ ConcurrentHashMap
-ArrayList │  HashSet TreeSet─ Deque ── ArrayDeque
-LinkedList│  LinkedHashSet
-        Vector(legacy)
-```
+
+**How to read it:** rounded blue = **interfaces**, green = **implementations you actually use**, red = **legacy (avoid)**. The dotted line shows `LinkedList` implementing `Deque` too — that's why `Queue<Integer> q = new LinkedList<>()` works. `HashSet` is backed by `HashMap`, and `TreeSet` by `TreeMap` (see §4).
 
 **Interfaces = the contract, implementations = the data structure:**
 
 | Interface | Guarantees | Main implementations |
 |-----------|-----------|---------------------|
-| `List` | Ordered by index, duplicates OK | `ArrayList`, `LinkedList` |
+| `List` | Ordered by index, duplicates OK | `ArrayList`, `LinkedList`, `Vector`+`Stack` (legacy) |
 | `Set` | No duplicates | `HashSet`, `LinkedHashSet`, `TreeSet` |
 | `Queue`/`Deque` | FIFO / both-ends | `ArrayDeque`, `PriorityQueue`, `LinkedList` |
+| Stack (LIFO) | Last in, first out | `ArrayDeque` (preferred), `Stack` (legacy) — see §5 |
 | `Map` | Key → value, unique keys | `HashMap`, `LinkedHashMap`, `TreeMap`, `ConcurrentHashMap` |
+
+> Note: there is **no `Stack` interface** in Java — LIFO is a *discipline*, not a contract in the type system. The legacy `Stack` class sits under `List` (it extends `Vector`), which is exactly its design flaw (§5). Modern code expresses "stack" as `Deque` + `push/pop`.
 
 **Choosing in 5 seconds (say this out loud in interviews):**
 - Need index access → `ArrayList`
@@ -417,3 +444,6 @@ set.contains(new Point(1, 2));   // FALSE if hashCode not overridden!
 16. When would you use TreeMap over HashMap? (Range queries, floor/ceiling — e.g. fee tiers.)
 17. When is CopyOnWriteArrayList appropriate?
 18. Is PriorityQueue sorted? What are its complexities?
+19. Why is `java.util.Stack` considered legacy? What should you use instead, and what breaks the LIFO contract?
+20. Why does `Queue<Integer> q = new LinkedList<>()` compile? When would you pick LinkedList over ArrayDeque as a queue? (null elements)
+21. `add/offer`, `remove/poll`, `element/peek` — which throw and which return null?

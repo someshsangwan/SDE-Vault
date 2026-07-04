@@ -65,6 +65,15 @@ graph TD
     class H,M shared;
 ```
 
+**The same structure as a picture** (stack frames holding references that point into the heap; method area holding class metadata + statics):
+
+![[JVM.jpeg]]
+
+- Each method call = one **stack frame** (that's why deep recursion = many frames = StackOverflowError, §3).
+- The `Reference` boxes on the stack **point across** into heap objects — delete the last reference and the heap object becomes garbage (§4).
+- Objects in the heap can reference **each other** (and arrays are objects too — also heap).
+- The dotted arrow from Method Area → Heap: static variables can also hold references to heap objects (which is exactly why a `static Map` is the classic memory leak, §8).
+
 **One annotated example — where does each thing live?**
 ```java
 class PaymentService {                    // class definition → METASPACE

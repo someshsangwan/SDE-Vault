@@ -321,6 +321,42 @@ void process() {
 
 ✅ `synchronized` fixes **BOTH** problems: race condition (one at a time) and visibility (entering/leaving a lock refreshes the thread's view of memory).
 
+### HOW does synchronized fix visibility? (the whiteboard rule)
+
+Main memory = a shared **whiteboard**; each thread's CPU cache = a private **notepad**. `synchronized` enforces two memory rules (this is the Java Memory Model, formally called **happens-before** — more in [[09_Java_Memory_Model]]):
+
+1. **Releasing a lock** → first copy your notepad to the whiteboard (flush writes to main memory).
+2. **Acquiring a lock** → first throw your notepad away and re-read the whiteboard (invalidate cache).
+
+Same lock on both sides → the reader is *guaranteed* to see the writer's change.
+
+**The §4 frozen-loop bug, fixed with synchronized instead of volatile:**
+```java
+class Main {
+    static boolean stopped = false;               // no volatile
+
+    static synchronized void stop()         { stopped = true; }
+    static synchronized boolean isStopped() { return stopped; }
+
+    public static void main(String[] args) throws Exception {
+        Thread worker = new Thread(() -> {
+            while (!isStopped()) { }              // every check: acquire lock → fresh read
+            System.out.println("worker stopped"); // ✅ now always prints
+        });
+        worker.start();
+
+        Thread.sleep(1000);
+        stop();                                   // write → lock release → flushed to whiteboard
+    }
+}
+```
+
+**Two traps:**
+1. **Both sides must use the SAME lock.** Synchronizing only `stop()` while the worker reads `stopped` directly = still broken — the writer publishes to the whiteboard but the reader never looks at it.
+2. Why the broken version loops **forever** (not just "late"): the JIT compiler sees a plain variable this thread never writes and optimizes `while (!stopped)` into "read once, reuse the copy." A lock acquire (or `volatile`) forbids that optimization.
+
+**Which fix for a flag?** `volatile` — it gives you the visibility half of synchronized *without* the locking half (no waiting in line). Use synchronized when you also need atomicity (§4 Problem 1).
+
 ---
 
 ## 6. `volatile` — fixes ONLY visibility

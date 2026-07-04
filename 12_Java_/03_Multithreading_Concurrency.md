@@ -211,7 +211,7 @@ Keep asking yourself for every tool below: *which of the two problems does it fi
 
 `synchronized` puts a **lock** on the code. Think of a toilet key 🔑: one key per object, whoever holds it gets in, everyone else **waits at the door** (state = BLOCKED).
 
-**Your example — two threads printing through the same object:**
+**The demo — two threads printing through the same object:**
 ```java
 class Table {
     synchronized void print() {          // ← take the key of THIS object before entering
@@ -222,23 +222,18 @@ class Table {
     }
 }
 
-class A extends Thread {
-    Table t;
-    A(Table t) { this.t = t; }
-    public void run() { t.print(); }
-}
-
 class Main {
     public static void main(String[] args) {
         Table obj = new Table();     // ONE shared object → one shared key
 
-        A t1 = new A(obj);
-        A t2 = new A(obj);
+        Thread t1 = new Thread(() -> obj.print());
+        Thread t2 = new Thread(() -> obj.print());
         t1.start();
         t2.start();
     }
 }
 ```
+(No extra class needed — `new Thread(() -> obj.print())` says: "make a thread whose job is to call `obj.print()`.")
 Output **WITH** `synchronized` — one thread finishes fully, then the other:
 ```
 Thread-0: 1

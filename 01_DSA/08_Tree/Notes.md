@@ -5,16 +5,105 @@
 
 ---
 
-## 1. Terminology (30-second refresher)
+## 1. Terminology — one example tree, every term explained
 
-- **Root** — top node (no parent).
-- **Leaf** — node with no children.
-- **Depth of a node** — edges from root down to it (root = depth 0).
-- **Height of a node** — edges from it down to its deepest leaf (leaf = height 0). *Height of tree = height of root.*
-- **Binary tree** — each node has ≤ 2 children (`left`, `right`).
-- **BST (Binary Search Tree)** — binary tree where `left subtree < node < right subtree` (recursively, for the ENTIRE subtree, not just the immediate child — classic trap in LC 98).
-- **Complete tree** — all levels full except possibly the last, filled left-to-right (this is what a heap is).
-- **Balanced tree** — height difference of left/right subtrees ≤ 1 at every node.
+We'll use this ONE tree (10 nodes) for all the terms below:
+
+```mermaid
+graph TD
+    A((1)) --> B((2))
+    A((1)) --> C((3))
+    B --> D((4))
+    B --> E((5))
+    C --> X[" "]
+    C --> F((6))
+    D --> G((7))
+    D --> Y[" "]
+    E --> H((8))
+    E --> I((9))
+    G --> J((10))
+    G --> Z[" "]
+    style X fill:none,stroke:none
+    style Y fill:none,stroke:none
+    style Z fill:none,stroke:none
+```
+
+(Node `3` has only a right child `6`; node `4` has only a left child `7`; node `7` has only a left child `10`.)
+
+### Root — top node (no parent)
+Node **1**. It's the only node nobody points to. In Java, the variable `TreeNode root` holding node 1 *is* the whole tree — from it you can reach all 10 nodes.
+
+### Leaf — node with no children
+Nodes **10, 8, 9, 6** — both `left` and `right` are `null`.
+⚠️ Node **7** is NOT a leaf (it has child 10), and node **3** is NOT a leaf (it has child 6). One child is enough to disqualify. In code: `node.left == null && node.right == null`.
+
+### Depth of a node — edges from ROOT down to it (root = depth 0)
+Count edges walking **down from node 1**:
+
+| Depth | Nodes |
+|---|---|
+| 0 | 1 (the root) |
+| 1 | 2, 3 |
+| 2 | 4, 5, 6 |
+| 3 | 7, 8, 9 |
+| 4 | 10 |
+
+Depth is a **top-down** idea — a node's depth = parent's depth + 1. Note that leaves can sit at *different* depths: leaf 6 is at depth 2, leaf 10 at depth 4.
+
+### Height of a node — edges from it down to its DEEPEST leaf (leaf = height 0)
+Count edges walking **down from the node itself**, always taking the longest way:
+
+| Node | Height | Why |
+|---|---|---|
+| 10, 8, 9, 6 | 0 | leaves |
+| 7 | 1 | 7 → 10 |
+| 5 | 1 | 5 → 8 (or 9) |
+| 3 | 1 | 3 → 6 |
+| 4 | 2 | 4 → 7 → 10 |
+| 2 | 3 | 2 → 4 → 7 → 10 |
+| **1 (root)** | **4** | 1 → 2 → 4 → 7 → 10 |
+
+Height is a **bottom-up** idea — a node's height = `1 + max(height(left), height(right))`. **Height of the tree = height of the root = 4.**
+
+> **Depth vs Height in one line:** depth is measured from the root DOWN TO the node; height is measured from the node DOWN TO its deepest leaf. Root has depth 0 but the biggest height; deepest leaf has height 0 but the biggest depth. For any node: `depth + height ≤ tree height` (equal when the node lies on a longest path).
+
+### Binary tree — each node has ≤ 2 children (`left`, `right`)
+Our example qualifies: every node has 0, 1, or 2 children. "≤ 2" means one-child nodes are fine (3, 4, 7). If any node had 3+ children it would be an **n-ary tree** instead.
+
+### BST (Binary Search Tree) — left subtree < node < right subtree, for the ENTIRE subtree
+Our example tree is **NOT** a BST (e.g., 2 is left of 1 but 5, 8, 9 > 1 live under it). A real BST holding the same count of nodes:
+
+```mermaid
+graph TD
+    A((8)) --> B((3))
+    A --> C((12))
+    B --> D((1))
+    B --> E((6))
+    C --> F((10))
+    C --> G((14))
+    E --> H((4))
+    E --> I((7))
+    F --> J((9))
+    F --> K((11))
+```
+
+Check node 8: *everything* in its left subtree {3,1,6,4,7} < 8, *everything* right {12,10,14,9,11} > 8. And it holds recursively at every node (check 12: left {10,9,11} all < 12 ✓).
+
+**The LC 98 trap** — this tree is NOT a BST even though every parent-child pair looks fine:
+
+```mermaid
+graph TD
+    A((10)) --> B((5))
+    A --> C((15))
+    C --> D((6))
+    C --> E((20))
+    style D fill:#f66,color:#fff
+```
+
+Locally fine: `6 < 15` ✓ (valid left child of 15). But **6 sits in the RIGHT subtree of 10, and 6 < 10** ✗. That's why validation must pass down range bounds `(lo, hi)`, not just compare with the immediate children.
+
+### Complete tree — all levels full except possibly the last, filled left-to-right
+Our example is **NOT** complete (depth-2 has a hole: node 3 is missing its left child, yet node 6 exists to its right). A complete tree with 10 nodes:
 
 ```mermaid
 graph TD
@@ -23,9 +112,24 @@ graph TD
     B --> D((4))
     B --> E((5))
     C --> F((6))
+    C --> G((7))
+    D --> H((8))
+    D --> I((9))
+    E --> J((10))
 ```
 
-Key fact: a binary tree with `n` nodes has `n - 1` edges, and a **balanced** one has height ~`log n`; a degenerate one (linked-list shape) has height `n`. This is why complexities are stated as **O(h)** — h ranges from `log n` (balanced) to `n` (skewed).
+Last level fills strictly left-to-right: 8, 9, 10 — no gaps before the end. This shape is what lets a **heap** live in a plain array: node at index `i` → children at `2i+1`, `2i+2`, no pointers needed.
+
+### Balanced tree — |height(left) − height(right)| ≤ 1 at EVERY node
+Our example is **NOT** balanced. Check the root: `height(left subtree of 1)` = height of 2 = 3, `height(right)` = height of 3 = 1 → difference **2** → unbalanced. (It even fails lower: node 4 has left height 1, right side `null` = height −1 by convention... but the root check alone already kills it.)
+
+The BST above IS balanced — verify the root: height(3) = 2, height(12) = 2 → diff 0 ✓, and it holds at every node.
+
+**Why you care:** balanced ⇒ height ≈ `log n` ⇒ BST operations are O(log n). Unbalanced worst case (every node one child, a "linked list in disguise") ⇒ height = n−1 ⇒ everything degrades to O(n).
+
+### Key facts
+- A tree with `n` nodes always has exactly `n − 1` edges.
+- Balanced height ≈ `log₂ n`; skewed height = `n − 1`. This is why complexities are stated as **O(h)** — h ranges from `log n` (balanced) to `n` (skewed).
 
 ---
 

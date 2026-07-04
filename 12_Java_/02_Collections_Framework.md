@@ -260,6 +260,69 @@ Same steps 1–2 to find the bucket, then walk chain/tree with `hash` check + `e
 | Untreeify threshold | **6** | tree → list on resize |
 | Min treeify capacity | **64** | below this, resize instead of treeify |
 
+### ⭐ Hand-rolled HashMap — the "implement HashMap" question
+
+Interviewers ask you to code a minimal version. This captures the essence (array of buckets + chaining), without treeify/resize:
+
+```java
+class HashMap<K, V> {
+
+    private final Node<K, V>[] bucket;
+
+    @SuppressWarnings("unchecked")
+    HashMap(int capacity) {
+        bucket = new Node[capacity];      // must initialize — generic array needs the cast/raw trick
+    }
+
+    static class Node<K, V> {
+        final K key;
+        V value;
+        Node<K, V> next;                  // collision → linked list (chaining)
+
+        Node(K key, V value) { this.key = key; this.value = value; }
+    }
+
+    public void put(K key, V value) {
+        int index = hash(key);
+        Node<K, V> temp = bucket[index];
+
+        while (temp != null) {            // 1) key already present? → REPLACE (Map contract!)
+            if (temp.key.equals(key)) {
+                temp.value = value;
+                return;
+            }
+            if (temp.next == null) break; // stop at tail
+            temp = temp.next;
+        }
+
+        Node<K, V> node = new Node<>(key, value);   // 2) not found → append (or empty bucket)
+        if (temp == null) bucket[index] = node;
+        else temp.next = node;
+    }
+
+    public V get(K key) {
+        Node<K, V> temp = bucket[hash(key)];
+        while (temp != null) {
+            if (temp.key.equals(key)) return temp.value;
+            temp = temp.next;
+        }
+        return null;
+    }
+
+    private int hash(K key) {
+        return (key.hashCode() & 0x7fffffff) % bucket.length;   // mask sign bit — see trap below
+    }
+}
+```
+
+**The three bugs interviewers plant / probe (know them!):**
+1. **Forgetting the replace case in `put`** — appending blindly creates duplicate keys. A Map must *update* the value when the key exists. (Say it: "first search the chain, replace if found, else append.")
+2. **`Math.abs(hashCode()) % n` is broken** — `Math.abs(Integer.MIN_VALUE)` is *still negative* (int overflow) → negative index → `ArrayIndexOutOfBoundsException`. Fix: mask the sign bit `(h & 0x7fffffff) % n`, or do what the JDK does: power-of-2 capacity + `(n-1) & hash`.
+   Fun proof: `"polygenelubricants".hashCode() == Integer.MIN_VALUE` — put that key and the Math.abs version crashes. (Verified by actually running it.)
+3. **Generic array creation** — `new Node<K,V>[16]` doesn't compile (arrays + generics don't mix, see [[07_Generics_Type_Erasure]]); you need `(Node<K,V>[]) new Node[capacity]` with `@SuppressWarnings`.
+
+**Follow-ups to be ready for:** add `remove(key)` (relink `prev.next = temp.next`), add resize (double capacity when `size > 0.75 × n`, re-bucket every node), and "how does the real HashMap differ?" → hash spreading `h ^ (h >>> 16)`, `(n-1) & hash` instead of `%`, treeify at 8, lazy table allocation.
+
 ### ⭐ INTERVIEW EXTRA — the follow-up questions
 - **Why load factor 0.75?** Trade-off: higher → less memory but more collisions; lower → fewer collisions but wasted space + frequent resize. 0.75 keeps expected chain length ~constant.
 - **Why 8 for treeify?** With a good hash, bucket sizes follow a Poisson distribution — P(8 nodes in one bucket) ≈ 0.000000006. If it happens, your hashCode is bad, so pay for the tree.

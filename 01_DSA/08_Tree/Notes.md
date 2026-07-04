@@ -279,6 +279,10 @@ List<List<Integer>> levelOrder(TreeNode root) {
 
 The `int size = q.size()` snapshot is what separates levels. Right-side view, zigzag, level averages, min depth — all are 2-line edits of this template.
 
+> **Queue FAQ (my own questions answered):**
+> - `new LinkedList<>()` vs `new ArrayDeque<>()`? Both implement `Queue` and both work. `ArrayDeque` is array-backed → no per-element node object, better cache locality, less GC → generally faster. `LinkedList` is fine too (and allows `null` elements, which `ArrayDeque` rejects — irrelevant here since we null-check before offering).
+> - `offer` vs `add`? Identical for unbounded queues. The pairs are: `add`/`remove`/`element` **throw** on failure; `offer`/`poll`/`peek` **return** `false`/`null`. The difference only matters for capacity-bounded queues (e.g. `ArrayBlockingQueue`); for BFS use either — `offer`/`poll` is just the idiomatic Queue style.
+
 **Complexity for ALL traversals:** Time **O(n)** (each node once). Space **O(h)** for DFS (recursion stack / explicit stack), **O(w)** for BFS where w = max width (worst case ~n/2 for the last level of a complete tree).
 
 ---

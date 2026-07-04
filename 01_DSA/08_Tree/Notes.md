@@ -448,12 +448,24 @@ Interview phrasing: say **"O(h) space, which is O(log n) if balanced, O(n) worst
 
 ---
 
-## 8. Suggested solve order (for the Leetcode folder)
+## 8. The 12-question list (solve in this order, in the Leetcode folder)
 
-**Warm-up (traversals + basic recursion):** 104 → 100 → 101 → 226 (invert) → 102 → 94 (iterative inorder)
-**Core patterns:** 110 → 543 → 112/113 → 199 → 111 → 105 → 572
-**BST:** 700 → 98 → 230 → 235 → 108 → 450
-**FAANG favorites (hard-ish):** 236 → 124 → 297 → 662 → 437
+| # | Problem | Diff | Pattern |
+|---|---------|------|---------|
+| 1 | LC 104 — Maximum Depth (= "Height of Binary Tree") | Easy | Recursion skeleton |
+| 2 | LC 226 — Invert Binary Tree | Easy | Modify during recursion |
+| 3 | LC 101 — Symmetric Tree | Easy | Two-node recursion (D) |
+| 4 | LC 102 — Level Order Traversal | Med | BFS template (C) |
+| 5 | LC 199 — Right Side View | Med | BFS variant (C) |
+| 6 | LC 543 — Diameter | Easy | Return one arm, record both (A) |
+| 7 | LC 98 — Validate BST | Med | Range bounds (E) |
+| 8 | LC 230 — Kth Smallest in BST | Med | Inorder = sorted (E) |
+| 9 | LC 236 — LCA of Binary Tree | Med | LCA template (F) |
+| 10 | LC 105 — Construct from Pre+Inorder | Med | Construction (G) |
+| 11 | LC 124 — Max Path Sum | Hard | #6's trick + negative pruning |
+| 12 | LC 297 — Serialize/Deserialize | Hard | Preorder + null markers (G) |
+
+**Bonus if time:** LC 112 (Path Sum, top-down style), LC 572 (Subtree of Another Tree — Amazon favorite).
 
 ---
 

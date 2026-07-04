@@ -491,24 +491,16 @@ graph TD
 
 ## 9. CompletableFuture — "when it's done, then do this"
 
-`future.get()` blocks (you stand and wait for the pizza). `CompletableFuture` = leave your phone number: "**when** it's ready, **then** call me." You chain steps like Streams:
+`future.get()` blocks (you stand and wait for the pizza). `CompletableFuture` = leave your phone number: "**when** it's ready, **then** call me."
 
-```java
-CompletableFuture.supplyAsync(() -> fetchUser(id))       // step 1 in another thread
-    .thenApply(user -> user.getEmail())                  // step 2: transform (like map)
-    .thenAccept(email -> sendMail(email))                // step 3: consume
-    .exceptionally(ex -> { log(ex); return null; });     // if any step failed
-```
-
-**The real power — run independent calls in PARALLEL:**
+**The ONE example to remember — parallel calls, then combine** (the interview question is: *"call two services in parallel and merge the results"*):
 ```java
 CompletableFuture<Risk>    risk = CompletableFuture.supplyAsync(() -> riskCheck(txn));
 CompletableFuture<Balance> bal  = CompletableFuture.supplyAsync(() -> balanceCheck(txn));
 
-// both run at the same time; combine when BOTH finish:
-CompletableFuture<Decision> decision = risk.thenCombine(bal, (r, b) -> approve(r, b));
+Decision d = risk.thenCombine(bal, (r, b) -> approve(r, b)).join();  // both ran at the same time
 ```
-> If risk-check takes 200ms and balance-check 300ms: sequential = 500ms, parallel = 300ms. Total time = slowest call, not the sum. This is how a payment authorization fans out to risk + balance + fraud services at once.
+> Risk-check 200ms + balance-check 300ms: sequential = 500ms, parallel = **300ms** — total time = slowest call, not the sum.
 
 Cheat table (map to Streams in your head):
 | Method | Like Streams' | Meaning |
@@ -527,65 +519,28 @@ Cheat table (map to Streams in your head):
 - `notify()` = "wake ONE sleeping thread." `notifyAll()` = "wake ALL of them."
 - All three must be called **inside `synchronized`** (you must hold the key to use them), else `IllegalMonitorStateException`.
 
-**THE classic interview exercise — Producer–Consumer.** One thread produces items into a box of limited size; another consumes them. Producer must wait when the box is full; consumer must wait when it's empty:
+**THE classic interview exercise — Producer–Consumer** ("implement a blocking queue" — a top-5 concurrency coding question at Amazon/Microsoft). Producer waits when the box is full; consumer waits when it's empty. This is the whiteboard-sized version — memorize it:
 
 ```java
-import java.util.*;
-
 class Box {
     private final Queue<Integer> items = new LinkedList<>();
     private final int capacity = 2;
 
     public synchronized void put(int item) throws InterruptedException {
-        while (items.size() == capacity) {   // box full?
-            System.out.println("box full, producer waiting...");
-            wait();                           // release key + sleep
-        }
+        while (items.size() == capacity) wait();   // full → release key + sleep (WHILE, not if!)
         items.offer(item);
-        System.out.println("produced " + item);
-        notifyAll();                          // wake sleeping consumers
+        notifyAll();                               // wake sleeping consumers
     }
 
     public synchronized int take() throws InterruptedException {
-        while (items.isEmpty()) {             // box empty?
-            System.out.println("box empty, consumer waiting...");
-            wait();
-        }
+        while (items.isEmpty()) wait();            // empty → release key + sleep
         int item = items.poll();
-        System.out.println("consumed " + item);
-        notifyAll();                          // wake sleeping producers
+        notifyAll();                               // wake sleeping producers
         return item;
     }
 }
-
-class Main {
-    public static void main(String[] args) {
-        Box box = new Box();
-
-        new Thread(() -> {                     // producer
-            try { for (int i = 1; i <= 5; i++) box.put(i); }
-            catch (InterruptedException e) { }
-        }).start();
-
-        new Thread(() -> {                     // consumer
-            try { for (int i = 1; i <= 5; i++) { Thread.sleep(300); box.take(); } }
-            catch (InterruptedException e) { }
-        }).start();
-    }
-}
 ```
-Output:
-```
-produced 1
-produced 2
-box full, producer waiting...
-consumed 1
-produced 3
-box full, producer waiting...
-consumed 2
-produced 4
-...
-```
+(To see it run: producer thread calls `put(1..5)` in a loop, consumer calls `take()` with a small sleep — the producer prints ahead until the box fills, then they alternate.)
 
 ### The 3 rules (each one is a follow-up question)
 1. **`wait()` goes inside `while`, never `if`.** A thread can wake up for no reason ("spurious wakeup"), or another thread may have grabbed the item first. After waking, **re-check the condition**.
@@ -603,24 +558,14 @@ int x = box.take();  // waits automatically if empty
 
 ## 11. ReentrantLock — `synchronized` with extra buttons
 
-Same idea as `synchronized` (one key, one thread), but the lock is a real object with extra abilities:
+Same idea as `synchronized` (one key, one thread), but the lock is a real object with extra abilities. The only pattern to memorize:
 
 ```java
-import java.util.concurrent.locks.ReentrantLock;
+private final ReentrantLock lock = new ReentrantLock();
 
-class Counter {
-    private final ReentrantLock lock = new ReentrantLock();
-    private int count = 0;
-
-    void increment() {
-        lock.lock();            // take the key
-        try {
-            count++;
-        } finally {
-            lock.unlock();      // ALWAYS unlock in finally — forget = everyone waits forever
-        }
-    }
-}
+lock.lock();
+try { count++; }
+finally { lock.unlock(); }   // ALWAYS in finally — forget = everyone waits forever
 ```
 
 **The extra buttons (memorize the 4):**
@@ -633,12 +578,7 @@ class Counter {
 
 **Rule of thumb (say this in interviews):** *"Start with `synchronized` — simpler and JVM-optimized. Switch to `ReentrantLock` only when I need tryLock, timeout, interruptible waiting, or fairness."*
 
-Bonus: **ReadWriteLock** — many readers at once OR one writer. Great for a cache read 1000×/sec, updated 1×/min:
-```java
-ReadWriteLock rw = new ReentrantReadWriteLock();
-rw.readLock().lock();    // many threads can hold the READ key together
-rw.writeLock().lock();   // the WRITE key is exclusive
-```
+Bonus one-liner: **ReadWriteLock** (`ReentrantReadWriteLock`) — many readers at once OR one exclusive writer; great for a cache read 1000×/sec and updated 1×/min.
 
 ---
 

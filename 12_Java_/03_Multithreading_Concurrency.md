@@ -97,6 +97,38 @@ t1.join();                        // main thread STOPS here until t1 finishes
 System.out.println("after join"); // guaranteed to print AFTER "work done"
 ```
 
+### ⭐ REALITY CHECK — who writes `new Thread(...)` in production? Almost nobody.
+
+In real Spring Boot code you rarely create threads yourself — **the framework creates them and runs YOUR code on them:**
+
+| Framework piece | Threads it creates | Your code that runs on them |
+|-----------------|--------------------|-----------------------------|
+| **Tomcat** (embedded) | request pool, default max 200 (`server.tomcat.threads.max`) | every `@RestController` / `@Service` method |
+| **Kafka listener container** | consumer threads | your `@KafkaListener` method |
+| **Spring scheduler** | scheduler pool | your `@Scheduled` method |
+| **`@Async`** | the executor you configure | your `@Async` method |
+
+Put `System.out.println(Thread.currentThread().getName())` in a controller → prints `http-nio-8080-exec-42`. That thread existed before your request and serves someone else after.
+
+**So why learn this chapter if threads are automatic? Because of THIS trap:**
+Spring beans are **singletons by default** — ONE instance of your `@Service` is shared by all 200 request threads. Any mutable field in it is the §4 race-condition demo, recreated without ever writing `Thread t1`:
+
+```java
+@Service
+class PaymentService {
+    private int requestCount = 0;                            // ❌ 200 threads share this → lost updates
+    private final Map<String, Txn> cache = new HashMap<>();  // ❌ shared HashMap → corruption
+
+    private final AtomicInteger safeCount = new AtomicInteger();          // ✅
+    private final Map<String, Txn> safeCache = new ConcurrentHashMap<>(); // ✅
+    // ✅ or best: no mutable state in beans at all — use local variables / DB / Redis
+}
+```
+
+**Where you DO write concurrency code in prod:** not `new Thread`, but the high-level tools — `CompletableFuture` to fan out parallel service calls (§9), a custom `ThreadPoolExecutor` bean for `@Async` (§8), `ConcurrentHashMap` / `AtomicInteger` for shared state (§7, §14).
+
+> The demos in this chapter create threads manually only to **make the invisible visible** — in production, Tomcat is the one calling `t1.start()`, 200 times over.
+
 ---
 
 ## 3. Thread Lifecycle (the states)

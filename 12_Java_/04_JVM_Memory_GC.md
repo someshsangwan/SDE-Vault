@@ -225,20 +225,46 @@ graph LR
 
 ## 8. Memory leaks in Java — "wait, GC exists, how can memory leak?"
 
-**A Java memory leak = objects you'll never use again but that are still REACHABLE** — so GC must keep them. The classic sources:
+Remember GC's one rule (§4): it frees an object only when **nothing points to it**. Flip it around:
 
+> **If something still points to an object, GC MUST keep it — even if YOU know you'll never use it again.**
+
+That's a Java memory leak: **logically dead objects that are still reachable.** GC isn't broken — *you* forgot to let go.
+
+**Analogy:** GC is a cleaner who only throws away plates nobody is holding. A leak is a shelf where you keep adding plates and never take one down — the cleaner walks past it forever.
+
+### Leak #1 — the static collection that only grows (the classic 3am OOM)
 ```java
-// 1. The static collection that only ever grows (the #1 real-world leak)
-static Map<String, Session> cache = new HashMap<>();   // static = GC root = lives forever
-// entries added per request, never removed → heap slowly fills over days → OOM at 3am
+@Service
+class SessionService {
+    static Map<String, Session> cache = new HashMap<>();   // static = GC ROOT = lives forever
 
-// 2. ThreadLocal in a thread pool (from Chapter 3 §13 — threads never die, values never freed)
-
-// 3. Unclosed resources (streams, connections) — fix: try-with-resources
-
-// 4. Listeners never unregistered — the subject holds a reference to your listener forever
+    void handleRequest(String userId) {
+        cache.put(userId, loadSession(userId));   // add on EVERY request
+        // ❌ nobody ever calls cache.remove(userId)
+    }
+}
 ```
-**Fixes:** bounded caches with eviction (LRU from [[02_Collections_Framework]] §7, or Caffeine), `ThreadLocal.remove()` in finally, try-with-resources, `WeakHashMap` for lookup tables.
+Trace the story:
+1. Day 1: 100,000 users hit the API → map holds 100,000 Session objects.
+2. Most users logged out hours ago — you'll never use their entries. **But the pointer chain is intact:** `static cache → map → entries → Sessions`. All reachable → GC can't touch any of it.
+3. `static` is the villain: a static field is a **GC root** — it never goes out of scope while the app runs, so the chain never breaks by itself.
+4. Heap graph climbs like a staircase for days (GC frees other stuff, never this) → heap hits `-Xmx` → **OutOfMemoryError at 3am**.
+
+**Fix:** let go — `remove()` on logout, or a cache that evicts automatically: LRU via LinkedHashMap ([[02_Collections_Framework]] §7) or Caffeine with `expireAfterAccess`.
+
+### Leaks #2–#4 — same disease, different pointer chain
+All leaks are the same pattern: **something long-lived keeps pointing at your dead data.**
+
+| # | Long-lived thing → dead data | Story | Fix |
+|---|------------------------------|-------|-----|
+| 2 | pool **thread** → ThreadLocal value | pool threads never die → user A's ThreadLocal data survives after the request ([[03_Multithreading_Concurrency]] §13) | `remove()` in `finally` |
+| 3 | **OS / DB server** → open handle | unclosed stream/connection leaks file handles & DB connections — resources GC can't even see | try-with-resources |
+| 4 | app-lifetime **registry/button** → your listener → your whole object | you registered a listener and never unregistered; the subject holds your object forever | `removeListener` when done |
+
+**Interview one-liner:** *"A Java memory leak is an unintentional strong reference from something long-lived — a static field, a pooled thread, a registry — to logically dead objects. GC's rule is reachability, not usefulness."*
+
+**Fixes recap:** bounded caches with eviction · `ThreadLocal.remove()` · try-with-resources · unregister listeners · `WeakHashMap` for lookup tables (next section).
 
 ### Reference strength (the follow-up)
 | Reference | GC may collect it? | Use |

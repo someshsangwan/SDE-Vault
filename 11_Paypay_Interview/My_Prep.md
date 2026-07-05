@@ -51,3 +51,18 @@
 **Beats:** trusted for system decisions → own a key service (ledger / order processing) → mentor new engineers, esp. non-Japan hires.
 
 ---
+
+## Q5: How does security matter in fintech (backend engineer's view)?
+
+> "Security is the most important thing in fintech because we handle real people's money. As a backend engineer, I focus on four things: making sure **only the right people can use the API**, keeping **sensitive user data like KYC information safe and encrypted**, encrypting **all data both when it moves over the network and when it sits in the database**, and keeping a **complete record of every transaction** so we can always check and fix anything that goes wrong."
+
+**Beats:** money = highest stakes → 4 things: (1) authN/authZ on the API · (2) protect KYC/PII, encrypted · (3) encryption in transit + at rest · (4) full audit trail of every transaction.
+
+**Likely follow-ups (be ready — they probe the four points):**
+- **"How do you make sure only the right people use the API?"** → authentication (who you are) vs authorization (what you're allowed to do); OAuth2 / JWT tokens, short-lived + refresh; role/scope checks per endpoint; mutual TLS for service-to-service (I already do this with Seven/Lawson Bank).
+- **"How do you protect KYC / sensitive data?"** → encrypt at rest (AES-256), tokenize or mask PII, principle of least privilege on who can read it, never log raw PII, key management via a KMS/HSM (not keys in code).
+- **"In transit vs at rest — what's the difference?"** → in transit = TLS/HTTPS + mTLS between services so nobody can sniff it on the wire; at rest = DB/disk encryption so a stolen dump is useless without keys.
+- **"Why the audit trail / how do you build it?"** → append-only, immutable ledger; every money movement is an event you can replay; ties into idempotency + reconciliation (my recovery batch depends on it); also needed for compliance and dispute resolution.
+- **"How do you stop the same request running twice (double-charge)?"** → idempotency keys on transaction IDs — bridge straight back to my Rakuten Cash cash-rail work.
+
+---

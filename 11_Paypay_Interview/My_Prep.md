@@ -26,9 +26,9 @@
 >
 > The **first reason is the technical challenge.** PayPay Securities connects a payment app with a stock investment service — and making these two systems work together smoothly is a really hard problem. For example, when a user buys stock, we need to take money from their PayPay wallet and update their investment account at **exactly the same time**. If anything fails in the middle, we need to **roll it back safely**. This kind of problem — using things like **Kafka and the Saga pattern** — is exactly what I enjoy working on.
 >
-> The **second reason is the product itself.** I think it is really meaningful to help regular people start investing. Most people in Japan keep their money in a bank account earning almost no interest. PayPay Securities lets you start investing with just **100 yen**. That is a simple but powerful idea, and I want to be part of building the system that makes it work."
+> The **second reason is the product and its scale.** I think it is really meaningful to help regular people start investing. Most people in Japan keep their money in a bank account earning almost no interest. PayPay Securities lets you start investing with just **100 yen** — that is a simple but powerful idea. And the timing is perfect: the government started the **New NISA program**, which gives people a tax-free way to invest, so the number of investors is going to keep growing. On top of that, PayPay already has a **70 million user ecosystem**, and many of these everyday shoppers can become investors. So the user base is only going to get bigger. That is exactly the kind of challenge I want to work on — **how do we scale the system to handle this much traffic and still keep every transaction smooth and correct**, especially at busy times like when the market opens."
 
-**~180 words ≈ 75–80 sec.** If told "briefly": the two one-line reasons only (technical challenge + meaningful product).
+**~210 words ≈ 85–90 sec.** If told "briefly": the two one-line reasons only (technical challenge + meaningful product at scale).
 
 ---
 

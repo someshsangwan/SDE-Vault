@@ -51,18 +51,3 @@
 **Beats:** trusted for system decisions → own a key service (ledger / order processing) → mentor new engineers, esp. non-Japan hires.
 
 ---
-
-## Cheat sheet (memorize this, not the scripts)
-
-**Intro beats:** Java/Spring Boot + PHP (their stack) → Rakuten Cash = PayPay Money → cash rail @ Seven/Lawson ATMs, exactly-once → recovery batch hours→3min → on-call root cause → IIT EE, 1000+ problems → bridge.
-
-**Why-PPSEC beats:** I enjoy hard money + data-consistency backend → **(1) technical challenge:** payment app ↔ stock service, buy stock = debit PayPay wallet + update investment account at exactly the same time, roll back safely on failure → Kafka + Saga pattern → **(2) the product:** meaningful to help regular people invest, savings earn ~0%, start with 100 yen — want to build the system behind it.
-
-**JD words to hit naturally (they score against these):** *root cause* · *high throughput* · *large scale* · *founding member / new organization* · *people who haven't started asset management*.
-
-**Numbers:** 70M PayPay users · 28M NISA accounts · ¥2,000兆 savings · 1M Rakuten Cash investing users in 9 months · 100-yen investing · hours→3min · 45min→5min rollback (if infra comes up).
-
-**If asked "the JD says 5+ years, you have 2":**
-> "In calendar years, two. But those two years were on the money path of a payment company — bank integrations, idempotency, on-call, incident response — with end-to-end ownership of systems I designed, built, and operate. I'd put my depth in payments backend against most five-year resumes, and what I don't have yet — the brokerage domain, your scale — is exactly why I want to be here."
-
-**Never do:** recite resume chronologically · list tech without problems · badmouth Rakuten · claim brokerage knowledge you don't have · run over time.

@@ -107,6 +107,82 @@
 
 ---
 
+## §3: JD ↔ My Experience — Requirement-by-Requirement Match
+
+> Interviewers score against the JD. Echoing its exact phrases ("root cause", "high throughput", "large scale") makes their checklist easy to tick — weave these into the two answers above, don't recite them as a list.
+
+### The headline insight
+
+Their stack line is: **"PHP, Java, SpringBoot, Kotlin, MySQL/AuroraDB."**
+
+Most Java candidates have never touched PHP professionally. You have **both in production at a payments company** — Java/Spring Boot on the core transaction path, PHP/Symfony for the gift recovery batch. That's your single strongest differentiator. Say it explicitly:
+
+> "I noticed your stack is Java/Spring Boot plus PHP — that's exactly my setup at Rakuten Pay. Our core transaction path is Java/Spring Boot, and our recovery and reconciliation batches are PHP/Symfony, and I've shipped production code in both."
+
+### Responsibilities → my evidence
+
+| JD says | My evidence | The sentence to say |
+|---|---|---|
+| **Develop and operate backend (PHP, Java, SpringBoot, Kotlin, MySQL/Aurora)** | Java/Spring Boot on Rakuten Pay's transaction path; PHP/Symfony recovery batch; MySQL-family ledger DBs; Kotlin = willing to learn | "I work in exactly this stack daily — Java/Spring Boot for the core path, PHP/Symfony for batches. Kotlin I haven't shipped, but it's the same JVM and Spring ecosystem, so the ramp is short." |
+| **Design large-scale, high-complexity, high-throughput systems** | ATM cash-charge integration (Lawson/Seven Bank); Gatling load tests at 2× peak holiday traffic; fixed the bottlenecks found (HikariCP pool sizing, N+1 → `@EntityGraph`) | "I load-tested our APIs at twice peak holiday traffic with Gatling, found the connection-pool and N+1 bottlenecks, and fixed them before the real surge hit." |
+| **Leverage infrastructure to solve large-scale problems** | K8s + ArgoCD/Helm GitOps; rollback redesign 45 min → 5 min via semantic image tags in ECR; Cloud Composer (Airflow) orchestration; Datadog/Grafana | "I redesigned our rollback from a 45-minute rebuild to a 5-minute image swap — the fix wasn't code, it was using the infrastructure correctly: ECR semantic tags plus ArgoCD." |
+| **Develop tools, contribute to open source where possible** | Gitleaks secret-scanning in GitLab CI; internal batch tooling; Buddy app (Spring Boot/PostGIS/WebSockets) on GitHub | "I added automated secret detection to our CI pipeline with Gitleaks, and I build side projects end-to-end — my Buddy app backend is Spring Boot with PostGIS and WebSockets." |
+| **"Always go to root cause!"** ⭐ | On-call incident: 504 spikes → Grafana → pool depletion → blocked ledger transaction → **root cause: unindexed analytics query on the primary DB** → hotfix index + policy change | This is *their own slogan* — hand it back: "That incident taught me the difference between the symptom — timeouts — and the root cause — an unindexed reporting query on the write DB. I fixed the query, but the real fix was the rule: analytics never runs on the primary." |
+
+### Required qualifications → my status
+
+| JD requires | My status | How to play it |
+|---|---|---|
+| **5+ years backend experience** | ⚠️ 2 years | The one real gap — strategy below. Never raise it yourself. |
+| **Java/PHP professional experience** | ✅✅ Both, in production, at a payments company | Your strongest card — lead with it. |
+| **Interest/ability to learn other languages** | ✅ EE → self-taught SWE; JS/React Native side projects; Kotlin next | "I switched from Electrical Engineering to software by teaching myself — learning languages is my default mode, not an exception." |
+| **NoSQL databases and distributed cache** | ✅ Redis in production (TTL presence, pub/sub WebSocket fan-out, SETNX idempotency locks, Lua-scripted rate limiter); Firebase Realtime DB | "Redis is my main distributed cache — idempotency locks with SETNX, pub/sub routing across WebSocket servers, TTL-based presence." |
+| **Strong DSA / algorithms / OOP fundamentals** | ✅ 1000+ problems solved | Prove it in the live coding round, don't claim it. The number appears once, in the self-intro. |
+| **In-depth concurrency & distributed computing** | ✅ Isolation levels & locking (pessimistic `FOR UPDATE` on money paths, optimistic `@Version` elsewhere); idempotency under ATM retries; Saga vs 2PC (argued for and won); Kafka | "Payments *is* applied concurrency — my daily work is idempotency under retries, isolation levels on the ledger, and distributed consistency without 2PC. I once prototyped a Saga to talk a senior engineer out of two-phase commit." |
+| **CS/CE degree or 5+ yrs equivalent** | ⚠️ EE from IIT Ropar | "My degree is Electrical Engineering from IIT Ropar, with coursework in data structures, algorithms, and computer architecture — backed by a thousand-plus problems and production fintech work." Don't apologize. |
+| **Business English or JLPT N1** | ✅ Business English | Also matches their global-team pitch — you already work in a multicultural team at Rakuten. |
+
+### Preferred qualifications → my evidence
+
+| JD prefers | My evidence |
+|---|---|
+| **RESTful APIs, Pub/Sub, database clients** | 70+ REST endpoints in Buddy app; Kafka events at work; Redis pub/sub; JPA/Hibernate + HikariCP tuning |
+| **AWS services** | ECR, security groups/routing, Secrets Manager, read replicas |
+| **Massive transaction volume / scalability** | Rakuten Pay production traffic; holiday-surge load testing; pool + replica scaling under incident |
+| **Microservices** | Service-to-service integration at Rakuten Pay; Saga-based distributed rollback; Spring Cloud Contract tests |
+| **Securities / finance industry experience** | Payments = adjacent, arguably the harder half. Frame: "I know how money moves; I'm joining to learn how it's invested." |
+| **In-house product development** | Rakuten Pay is an in-house product — plus two personal products built solo, end to end |
+
+You hit **all six** preferred qualifications at least partially; most candidates hit two or three. Work these in quietly, never as a checklist.
+
+### The 5-years question
+
+The JD asks for 5+; you have 2. Facts in your favor:
+
+1. **You're already in the loop** — they saw your resume and passed you through OA and HR screening, so the number didn't filter you out. Never bring it up yourself.
+2. **If asked directly** ("the role asks for 5 years — how do you see that?"):
+
+> "In calendar years, two. But those two years were on the money path of a payment company — bank integrations, idempotency, production on-call, incident response — with end-to-end ownership of systems I designed, built, and operated myself. I'd put my depth in payments backend against most 5-year resumes, and the parts I don't have yet — brokerage domain, your scale — are exactly why I want to be here. I ramp fast: I went from Electrical Engineering to shipping production fintech code in under a year."
+
+3. **The JD itself gives you the escape hatch**: the role is for a team being **built from scratch** ("founding members to build up a new organization"). Founding teams optimize for ownership and slope over tenure — exactly the story your resume tells.
+
+### JD language to echo verbatim
+
+Drop these exact phrases naturally — they're scoring against them:
+
+- **"root cause"** — their literal slogan. Use it once in the incident story.
+- **"high throughput" / "large scale"** — when describing Gatling tests and pool tuning.
+- **"identify issues on their own"** (culture blurb) — the gift recovery batch: you *volunteered* to fix a manual-ops pain nobody assigned you.
+- **"people who have not yet started asset management"** — mirror in the why-PPSEC answer: building for first-time investors, not traders.
+- **"founding members / build up a new organization"** — in the closing "why you" moment: "The chance to be a founding member of a new engineering organization is what I can't get by staying where I am."
+- **"overwhelming speed"** — pairs with your unclear-requirements story (drafted the API contract instead of waiting for specs).
+
+### One-breath closing pitch ("why should we hire you?")
+
+> "Three things. I already work in your exact stack — Java/Spring Boot plus PHP, in production, at a payment company. I've spent two years on the problems this role names: high-throughput money movement, idempotency, root-cause incident response. And I'm at the exact stage you're hiring for — hungry enough to help found a new organization, experienced enough to be on-call for it from day one."
+
+---
+
 ## Delivery notes (both questions)
 
 - **Practice out loud, 5+ times each.** The scripts above are written for the ear, not the eye — if a sentence trips your tongue, rewrite it in your own words. You're memorizing the *beats tables*, not the paragraphs.

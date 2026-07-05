@@ -36,19 +36,27 @@ Open to all FAANG+. Most realistic given profile: **Amazon, Microsoft, Google L4
 ```
 SDE-Vault/
 ├── 01_DSA/
-│   └── NN_<Pattern>/             ← e.g. 01_Two-Pointer/, 02_Sliding-Window/
-│       ├── 01_Notes.md           ← Pattern fundamentals
-│       └── LeetCode/             ← Java solutions (one .java per problem)
-├── 02_Computer-Network/
+│   └── NN_<Pattern>/             ← e.g. 01_Two-Pointer (Arrays)/, 08_Tree/
+│       ├── Notes.md              ← Pattern fundamentals
+│       └── Leetcode/             ← Java solutions (one .java per problem)
+├── 02_Computer-Network/          ← 00-index.md + numbered topic notes
 ├── 03_Operating-System/
 ├── 04_System-Design/
-│   ├── HLD/                      ← High-level / distributed system design
-│   └── LLD/                      ← Low-level / OOP design
-├── 05_Behavioral/                ← STAR stories from Rakuten Pay work
-└── 06_Interview_Experience/      ← Notes from interviews / mock rounds
+│   ├── HLD_Notes/                ← Numbered topic folders (00–29), each with Readme.md
+│   └── LLD/                      ← OOP basics, SOLID, design patterns
+├── 05_AI_Agent_KT/               ← (empty — planned)
+├── 06_Dev_OPS/                   ← Docker, K8s, CI/CD, cloud, monitoring
+├── 07_Linux_basic/
+├── 08_Behavioral/                ← (empty — planned) STAR stories from Rakuten Pay work
+├── 09_Interview_Experience/      ← (empty — planned)
+├── 10_springboot/
+├── 11_Paypay_Interview/          ← Interview experience, resume Q&A, design round
+└── 12_Java_/                     ← Core Java: collections, concurrency, JVM, streams
 ```
 
-**File naming:** numbered prefixes (`01_`, `02_`, …) keep folders/files in the order I want them displayed. Inside pattern folders, the main note is named `01_Notes.md`.
+**File naming:** numbered prefixes (`01_`, `02_`, …) keep folders/files in the order I want them displayed. Inside DSA pattern folders, the main note is `Notes.md`.
+
+**LeetCode solutions:** named `NN_<problem_name>_<leetcode_number>.java` (e.g. `06_DiameterOfTree_543.java`). Each file is a snippet-style `class Solution` with the LeetCode problem URL as a header comment — not standalone compilable code. There is no build system, test runner, or lint setup in this repo; it is a notes vault, not a Java project.
 
 ---
 
@@ -57,6 +65,8 @@ SDE-Vault/
 - **Note-taking:** Obsidian (this folder is the vault) + GitHub (public repo after prep is done)
 - **IDE:** VS Code with Claude Code extension
 - **Language:** Java for LeetCode (free tier)
+- **Gitignored:** PDFs/ebooks (copyrighted reference material), `.idea/`, `.claude/`, Java build artifacts — never commit these
+- **Commits:** short messages in the style `Added <Topic> <what>` (see `git log`)
 
 ---
 
@@ -65,7 +75,7 @@ SDE-Vault/
 1. **Topic notes:** When I ask for a topic, write a comprehensive Java-friendly fundamental note. Include pattern recognition triggers, templates, complexity analysis, common pitfalls, and self-check questions. Not a summary.
 2. **Code review:** Review my Java solutions for time/space complexity, idiomatic Java, edge cases. Be honest.
 3. **Concept explanation:** Use real-world analogies, especially payments / Rakuten Pay context.
-4. **Note assistance:** Markdown, Obsidian-friendly, use `[[wikilinks]]` for backlinks.
+4. **Note assistance:** Markdown, Obsidian-friendly, use `[[wikilinks]]` for backlinks. Diagrams always in Mermaid blocks (Obsidian renders them) — never ASCII art.
 5. **Mock interviews:** Run mock rounds when I ask.
 6. **Honest feedback:** Don't sugarcoat. If a solution is bad, say so and explain why.
 

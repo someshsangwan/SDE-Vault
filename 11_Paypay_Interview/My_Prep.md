@@ -66,3 +66,38 @@
 - **"How do you stop the same request running twice (double-charge)?"** → idempotency keys on transaction IDs — bridge straight back to my Rakuten Cash cash-rail work.
 
 ---
+
+## Q6: What do you understand by startup culture?
+
+> "For me, startup culture is not about free snacks or a cool office — it's about **how you actually work**. You move quickly, you don't wait for someone to give you all the answers, and you feel **real ownership** over what you build. I really like PayPay's values — especially **'No Ego' and 'Speed'**. At Rakuten Pay, the best results came when the team talked directly, shared ideas openly, and focused on the user's problem instead of a long chain of approvals. At PayPay Securities I'd work with engineers from **50+ countries, all in English** — that's where I do my best work. And because it's backed by **SoftBank**, you also get big-company stability and resources — the best of both worlds."
+
+**One-liner (say first):** startup culture = move fast, take full ownership, communicate openly — no top-down approval for every small decision.
+
+**Beats:** not snacks, it's *how you work* → fast + ownership + open comms → PayPay values: No Ego, Speed, Ownership → 50+ countries, English → SoftBank-backed = startup speed + big-company stability.
+
+**Good to know (drop naturally):**
+- **PayPay 5 Senses (values):** Speed first · No Ego (team wins) · Believe in the product · Be sincere & professional (matters in fintech) · Find your purpose (ownership).
+- **PPSEC stack:** Java/Spring Boot, Kotlin, Scala · AWS + Kubernetes + Argo CD (GitOps) · TiDB, Aurora MySQL, DynamoDB, Redis · Kafka for events.
+
+**Likely follow-ups:**
+- **"How do you move fast without breaking things in a financial app?"** → fast ≠ careless: good tests + automated CI/CD → deploy often and safely, catch bugs before prod; for high-risk changes use **canary releases** — roll out to a small group first, watch for errors, then everyone.
+- **"Tell me about a time you dealt with unclear requirements."** → Rakuten Pay, new payment method, product specs not ready. Instead of waiting, I wrote a simple **API contract** from what I understood, shared it so frontend could build a mock, and raised the unclear parts with the PO directly → caught issues early, saved ~2 weeks of rework.
+
+---
+
+## Q7: What is PayPay Securities & what can users do here?
+
+> "PayPay Securities is an **app-only stock brokerage** built for **first-time investors** — people who find traditional brokerages too complicated or expensive. It started in 2016 as **One Tap BUY** (Japan's first app-only brokerage) and was renamed in 2021 to tie into the **PayPay app**. The big advantage is it also runs as a **mini-app inside PayPay**, so those **70M+ users can start investing without opening a new account**. Users can buy **Japanese and US stocks from just 100 yen** — it works because we handle **fractional shares** internally."
+
+**What users can do (know these 5):**
+- **Start with 100 yen** — JP or US stocks; possible because PPSEC handles **fractional shares** internally (no need to buy a whole share).
+- **Point Investment (Point Unyo)** — put PayPay shopping points into a **virtual fund** to learn the market without spending real money.
+- **Leave-and-Buy (Omatase-Konyu)** — buy stocks straight from **PayPay Money / PayPay Bank** balance; no transfer to a separate brokerage account.
+- **US stocks 24/7** — buy Apple, NVIDIA etc. anytime, **in yen**, no manual currency exchange.
+- **NISA support** — Japan's tax-free investing program, so invest + save tax at the same time.
+
+**Beats:** app-only brokerage for first-time investors → One Tap BUY (2016) → PayPay Securities (2021) → mini-app inside PayPay, 70M users, no new account → 100-yen investing via fractional shares → point investing, buy from wallet (Omatase), US stocks 24/7 in yen, NISA.
+
+**Backend angle if they push ("what's hard here?"):** fractional shares = you own 0.001 of a real share, so the ledger must track fractions exactly and reconcile against the whole shares the broker actually holds; buying from the wallet = the cross-service money move (debit wallet ↔ credit investment) that ties back to my Q2 Kafka/Saga point.
+
+---

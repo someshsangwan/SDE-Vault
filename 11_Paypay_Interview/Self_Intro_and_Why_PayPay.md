@@ -1,6 +1,6 @@
 # Self-Introduction & "Why PayPay Securities" — Polished Answers
 
-> The two questions that open almost every round. First impressions are formed in these 3 minutes — everything after is the interviewer confirming or correcting that impression. Related: [[Interview_Experience]] · [[My_Resume_Q&A]]
+> The two questions that open almost every round, plus a JD ↔ experience mapping (§3) to weave into both. First impressions are formed in these 3 minutes — everything after is the interviewer confirming or correcting that impression. Related: [[Interview_Experience]] · [[My_Resume_Q&A]]
 
 ---
 

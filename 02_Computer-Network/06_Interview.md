@@ -14,7 +14,7 @@
 Walk it as a story — this is the single most-asked question because it touches every layer:
 
 1. **URL parse & cache check** — browser checks its own cache, then the OS cache, for `google.com`.
-2. **DNS resolution** — if not cached, a recursive resolver walks Root → `.com` TLD → Google's authoritative server to get the IP. *(See [[05-protocols-tcp-udp-dns-http]] §5.5.)*
+2. **DNS resolution** — if not cached, a recursive resolver walks Root → `.com` TLD → Google's authoritative server to get the IP.
 3. **ARP / routing** — to send the first packet, your machine needs the **MAC of the next hop** (your router). ARP resolves that on the local link.
 4. **TCP 3-way handshake** — SYN → SYN-ACK → ACK opens a reliable pipe to the server on port 443.
 5. **TLS handshake** — client and server agree on a shared secret key and the server proves its identity with a certificate. Now the channel is encrypted.
@@ -159,7 +159,7 @@ The clever part: **asymmetric** crypto (slow, public/private key) is used **only
 > **Aha:** IP = the building's street address. MAC = the specific person. Port = the apartment/room the message is for.
 
 - **DHCP** — auto-assigns your device an IP when it joins a network (the **DORA** dance: Discover → Offer → Request → Ack).
-- **NAT** — lets many private devices share one public IP; the router rewrites addresses and remembers who asked what, so replies come back to the right device. *(See [[03-your-network-dhcp-nat]].)*
+- **NAT (Network Address Translation)** — lets many private devices share one public IP; the router rewrites addresses and remembers who asked what, so replies come back to the right device.
 
 ---
 

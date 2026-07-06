@@ -32,6 +32,10 @@ Walk it as a story — this is the single most-asked question because it touches
 
 > **One-liner:** TCP is reliable and ordered but slower; UDP is fast and fire-and-forget with no guarantees.
 
+**First, what are they?** TCP and UDP are the two main **transport-layer protocols** — the rules your computer uses to actually **send and exchange data over a network/internet**. When one app (your browser, a game, a video call) wants to talk to another machine, it hands its data to *either* TCP *or* UDP, which chops it into packets and delivers them. They sit **on top of IP**: IP handles *where* the packet goes (addressing/routing), while TCP/UDP handle *how* it's delivered (reliably or not).
+
+So the real question isn't "TCP or the internet" — it's "which delivery style do I want?"
+
 | Aspect | TCP | UDP |
 |--------|-----|-----|
 | Connection | Handshake first | Just send |
@@ -49,15 +53,21 @@ Walk it as a story — this is the single most-asked question because it touches
 
 ## Q3. Explain the TCP 3-way handshake (and why not 2?)
 
-> **One-liner:** SYN, SYN-ACK, ACK — three messages so **both sides confirm they can send AND receive**.
+> **One-liner:** SYN, SYN-ACK, ACK — three messages so **both sides confirm they can send AND receive** before any data is sent.
+
+**What is it?** Before TCP sends real data, it does a quick "hello" to set up the connection — this setup is the **3-way handshake**. It makes sure both machines are alive, reachable, and agree on where to start counting bytes.
+
+**What do SYN and ACK mean?**
+- **SYN = Synchronize** — "I want to start a connection, and here's my starting byte-counter (sequence number)." TCP numbers every byte so it can detect loss and reorder packets; both sides must agree on where each other's numbering **starts** — that agreement *is* the "synchronize."
+- **ACK = Acknowledge** — "I received what you sent."
 
 ```
 Client → SYN (seq=x)              "Let's talk, my sequence starts at x"
-Server → SYN-ACK (seq=y, ack=x+1) "Got x, mine starts at y"
-Client → ACK (ack=y+1)            "Got y" → connection open, data flows
+Server → SYN-ACK (seq=y, ack=x+1) "Got your x, and mine starts at y"
+Client → ACK (ack=y+1)            "Got your y" → connection open, data flows
 ```
 
-**Why 3 not 2?** Two messages only prove **one** direction works. The third message confirms the reverse direction (client→server ack of server's SYN). Both sides must know the other can hear them before trusting the pipe.
+**Why 3 not 2?** Two messages only prove **one** direction works. The third message confirms the reverse direction (client's ack of the server's SYN). Both sides must know the other can hear them before trusting the pipe.
 
 **Teardown is 4-way** (FIN → ACK → FIN → ACK) because a TCP connection is **full-duplex** — each direction closes independently, and the side receiving the FIN may still have data left to send.
 
@@ -68,6 +78,8 @@ Client → ACK (ack=y+1)            "Got y" → connection open, data flows
 ## Q4. How does DNS resolution work?
 
 > **One-liner:** DNS is the internet's phonebook — it turns `google.com` into an IP by walking a hierarchy, and caches the answer.
+
+**What is it?** Computers don't route by names like `google.com` — they route by **IP addresses** (numbers). **DNS (Domain Name System)** is the global lookup service that translates the human-friendly name you type into the machine-friendly IP needed to actually reach the server. Without it you'd have to memorize `142.250.x.x` for every website.
 
 If not cached, a **recursive resolver** (e.g. your ISP or `8.8.8.8`) does the legwork:
 
@@ -92,6 +104,8 @@ If not cached, a **recursive resolver** (e.g. your ISP or `8.8.8.8`) does the le
 
 > **One-liner:** HTTPS = HTTP wrapped in TLS, giving **encryption + integrity + authentication**. HTTP is plaintext on port 80; HTTPS is encrypted on port 443.
 
+**What are they?** **HTTP (HyperText Transfer Protocol)** is the language browsers and servers use to exchange web pages — request goes out, response comes back. The problem: plain HTTP sends everything as **readable text**, so anyone between you and the server (a hacker on public WiFi, your ISP) can read or tamper with it. **HTTPS** fixes that by running HTTP inside a secure tunnel called **TLS (Transport Layer Security)**. The "S" = Secure. So HTTPS gives you three things: **encryption** (nobody can read it), **integrity** (nobody can change it undetected), and **authentication** (you're really talking to the real Google, not a fake).
+
 **TLS handshake** — how two strangers agree a secret over an open wire:
 
 ```
@@ -111,6 +125,8 @@ The clever part: **asymmetric** crypto (slow, public/private key) is used **only
 ## Q6. OSI model vs TCP/IP model — the layers and their jobs
 
 > **One-liner:** OSI is a 7-layer teaching model; TCP/IP is the 4-layer model the internet actually runs on. Data gets wrapped (encapsulated) going down and unwrapped going up.
+
+**What is it?** Networking is complicated, so engineers split the whole "get data from my app to yours" job into **layers**, where each layer has one clear responsibility and only talks to the layer above and below it. This makes the system modular — you can swap WiFi for Ethernet (bottom layer) without touching your web app (top layer). The **OSI model** is the 7-layer reference used for teaching; the **TCP/IP model** is the practical 4-layer version the real internet uses.
 
 | OSI (7) | Job | Example |
 |---------|-----|---------|
@@ -134,6 +150,8 @@ The clever part: **asymmetric** crypto (slow, public/private key) is used **only
 
 > **One-liner:** MAC identifies a device on the local link, IP identifies it across networks, and a port identifies the specific app/process on it.
 
+**What are they?** These are **three different kinds of address**, each answering a different question when data travels. To deliver a message you need to know *which building* (IP), *which exact device* (MAC), and *which app on that device* (port). They work together, not instead of each other.
+
 - **MAC** — permanent hardware address, Layer 2, only matters on the local link (next hop).
 - **IP** — logical address, Layer 3, used to route across the internet; can change.
 - **Port** — Layer 4 number identifying an app (HTTP 80, HTTPS 443, SSH 22).
@@ -148,6 +166,8 @@ The clever part: **asymmetric** crypto (slow, public/private key) is used **only
 ## Q8. How does HTTP work? GET vs POST, status codes, HTTP/1.1 vs 2 vs 3
 
 > **One-liner:** HTTP is a stateless request/response language — client sends a method + path, server replies with a status code + body.
+
+**What is it?** **HTTP (HyperText Transfer Protocol)** is the application-layer protocol that powers the web. Every time you load a page, click a link, or an app calls an API, it's speaking HTTP: the **client** (browser/app) sends a **request** ("give me `/home`"), and the **server** sends back a **response** (a status code + the content). It's the request/response conversation underneath everything you do online.
 
 **GET vs POST:** GET reads data (safe, idempotent, params in URL); POST creates/submits (not idempotent, body carries data).
 

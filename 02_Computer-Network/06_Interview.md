@@ -186,6 +186,8 @@ The clever part: **asymmetric** crypto (slow, public/private key) is used **only
 
 > **One-liner:** Hub is dumb (Layer 1, copies to everyone), switch is smart within a network (Layer 2, uses MAC), router connects different networks (Layer 3, uses IP).
 
+**What are they?** These are the three classic **devices that move data around a network** — the physical boxes traffic passes through. The difference is *how smart* each one is about where it sends data: a hub blindly copies to everyone, a switch delivers precisely to the right device inside your local network, and a router connects your network to *other* networks (like the internet).
+
 | Device | Layer | Forwards by | Smart? |
 |--------|-------|-------------|--------|
 | **Hub** | 1 (Physical) | Copies bits to **all** ports | ❌ Dumb — one big collision domain |
@@ -199,6 +201,8 @@ The clever part: **asymmetric** crypto (slow, public/private key) is used **only
 ## Q10. HTTP is stateless — so how do cookies, sessions, and CORS work?
 
 > **One-liner:** Since HTTP forgets you between requests, the server issues a **cookie** the browser sends back each time, mapping you to a **session** (state) on the server.
+
+**What's the problem being solved?** HTTP is **stateless** — the server treats every request as brand new and remembers nothing about you from the last one. But real websites *need* memory: "this user is logged in," "here's what's in their cart." Cookies and sessions are the trick that adds that memory on top of a forgetful protocol.
 
 - **Cookie** — a small piece of data the server sets (`Set-Cookie`); the browser attaches it to every subsequent request to the same site.
 - **Session** — server-side state (e.g. "user 42 is logged in") keyed by a session ID stored in the cookie. Alternative: a self-contained **JWT token**.

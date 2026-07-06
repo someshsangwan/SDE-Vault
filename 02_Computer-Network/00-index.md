@@ -12,6 +12,7 @@
 | 3 | [Your Network: DHCP & NAT](./03-your-network-dhcp-nat.md) | Public vs private IP, DHCP/DORA, NAT/PAT, client-server (WhatsApp vs Chrome) |
 | 4 | [Subnetting & CIDR](./04-subnetting-and-cidr.md) | Network/host split, subnet mask, the AND check, CIDR math |
 | 5 | [Protocols: TCP, UDP, DNS, HTTP/S](./05-protocols-tcp-udp-dns-http.md) | TCP vs UDP, handshake, DNS, HTTP/HTTPS/TLS, ARP/ICMP, full google.com journey |
+| 6 | [Top Interview Questions](./06_Interview.md) | The 11 most-asked SWE/SDE2 CN questions with spoken-out-loud answers (incl. L4 vs L7 load balancing) |
 
 ## 🎯 The 6 must-knows (learn these cold)
 1. **OSI layers + TCP/IP model** — order + one job per layer.

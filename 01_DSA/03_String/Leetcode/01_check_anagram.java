@@ -1,22 +1,34 @@
+//https://leetcode.com/problems/valid-anagram/
 
-// Function to check if two strings are anagrams
-static boolean areAnagram(String s1, String s2) {
 
-    int[] cnt = new int[26];
-
-    int n1 = s1.length();
-    int n2 = s2.length();
-
-    for (int i = 0; i < n1; i++)
-        cnt[s1.charAt(i) - 'a']++;
-
-    for (int i = 0; i < n2; i++)
-        cnt[s2.charAt(i) - 'a']--;
-
-    for (int i = 0; i < 26; i++) {
-        if (cnt[i] != 0)
+class Solution {
+    public boolean isAnagram(String s, String t) {
+        Map<Character,Integer>map=new HashMap<>();
+        if(s.length()!=t.length()){
             return false;
-    }
+        }
+        for(int i=0;i<s.length();i++){
+            char ch=s.charAt(i);
+            map.put(ch,map.getOrDefault(ch,0)+1);
+        }
+        for(int i=0;i<t.length();i++){
+            char ch=t.charAt(i);
+            if(map.containsKey(ch)){
+                int ct=map.get(ch);
+                if(ct==1){
+                    map.remove(ch);
+                }
+                else{
+                    map.put(ch,ct-1);
+                }
+            }
+        }
+        if(map.size()==0){
+            return true;
+        }
+        else{
+            return false;
+        }
 
-    return true;
+    }
 }

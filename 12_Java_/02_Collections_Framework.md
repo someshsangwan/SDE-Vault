@@ -433,26 +433,73 @@ while (it.hasNext()) if (it.next().startsWith("tmp")) it.remove();
 
 ## 10. Comparable vs Comparator
 
+Java can't sort *your* objects until you teach it how. These are the two ways to teach it — the same problem attacked from **opposite directions**.
+
 | | `Comparable<T>` | `Comparator<T>` |
 |--|-----------------|------------------|
-| Method | `compareTo(T o)` | `compare(T a, T b)` |
-| Where | inside the class ("natural order") | external, many per type |
+| Question it answers | "How do **I** compare to another?" | "How do I compare **these two**?" |
+| Method | `compareTo(T other)` — **1 arg** | `compare(T a, T b)` — **2 args** |
+| Where | **inside** the class (its "natural order") | **external**, a separate object — many per type |
 | Package | `java.lang` | `java.util` |
-| Use | one obvious ordering (`String`, `Integer`) | custom / multiple orderings |
+| How many orderings | exactly **one** | as many as you want |
+| Use when | one obvious ordering (`String`, `Integer`, `LocalDate`) | custom / multiple / can't edit the class |
 
-**Modern Comparator idioms (know these cold):**
+> **The 1-arg vs 2-arg tell:** `compareTo(other)` has one parameter because the object is comparing *itself* to `other`. `compare(a, b)` has two because it's an outsider — a judge — comparing two objects, neither of which is "itself." That single fact explains where each one lives.
+
+### The return-value contract (the core mental model)
+Both return an **`int`**, and only the **sign** matters — never rely on the magnitude:
+
+| Return | Meaning |
+|--------|---------|
+| **negative** | `this`/`a` comes **before** the other |
+| **zero** | equal in ordering |
+| **positive** | `this`/`a` comes **after** the other |
+
+Mnemonic: `Integer.compare(this.age, other.age)` — if mine is smaller → negative → I go first → **ascending**. (Use `Integer.compare`, *not* `a - b`; see overflow trap below.)
+
+### Comparable — the natural order (lives in the class)
+```java
+class Txn implements Comparable<Txn> {
+    BigDecimal amount;
+    @Override public int compareTo(Txn other) {      // "how do I compare to another?" → by amount
+        return this.amount.compareTo(other.amount);
+    }
+}
+Collections.sort(txns);   // just works — uses compareTo
+```
+This is why `Integer`, `String`, `LocalDate` sort out of the box — they all implement `Comparable`.
+
+### Comparator — custom / alternative orders (lives outside)
+A class has only **one** `compareTo`. Need to sort by amount *sometimes* and by merchant *other* times? That's a `Comparator` — a separate rule you pass in:
+```java
+Comparator<Txn> byMerchant = (a, b) -> a.merchant.compareTo(b.merchant);   // an outsider comparing two
+txns.sort(byMerchant);
+```
+
+**Modern Comparator idioms (know these cold — ~90% of real sorting):**
 ```java
 txns.sort(Comparator.comparing(Txn::getAmount));                       // by amount
 txns.sort(Comparator.comparing(Txn::getAmount).reversed());            // desc
-txns.sort(Comparator.comparing(Txn::getMerchant)                       // multi-key
+txns.sort(Comparator.comparing(Txn::getMerchant)                       // multi-key (tie-breaker)
                     .thenComparing(Txn::getAmount, Comparator.reverseOrder()));
 txns.sort(Comparator.comparing(Txn::getSettledAt,                      // null-friendly
                     Comparator.nullsLast(Comparator.naturalOrder())));
 ```
+`comparing` / `reversed` / `thenComparing` are the three workhorses.
 
-- Contract: return negative / zero / positive. Must be consistent (`sgn(compare(a,b)) == -sgn(compare(b,a))`, transitive) — a broken comparator throws `IllegalArgumentException: Comparison method violates its general contract!` from TimSort.
+### How to choose
+- **`Comparable`** — there's one obvious ordering that *belongs* to the object (amount, date, id).
+- **`Comparator`** — you need **multiple** orderings, you **can't modify** the class (library type), or the ordering isn't intrinsic to the object.
+
+> **They cooperate:** `TreeMap`, `TreeSet`, `PriorityQueue`, `Collections.sort`, `List.sort` all fall back to `Comparable`'s natural order **if** you don't hand them a `Comparator`. Supply a `Comparator` to override it.
+
+> 🏁 **Analogy (payments queue):** `Comparable` = each transaction knows its own amount and can say "I settle before you" — the rule lives *inside* each txn. `Comparator` = a **reconciliation judge** at the finish line comparing any two txns by whatever rule they pick (amount, merchant, settled-at) — the rule lives *outside*, and you can bring different judges for different reports.
+
+### Gotchas
+- Contract: return negative / zero / positive, and be consistent — `sgn(compare(a,b)) == -sgn(compare(b,a))`, transitive. A broken comparator throws `IllegalArgumentException: Comparison method violates its general contract!` from TimSort.
 - `Collections.sort` / `List.sort` use **TimSort** — hybrid merge+insertion sort, **O(n log n)** worst case, **stable** (equal elements keep their relative order — matters when sorting by amount then displaying by original time).
-- ⚠️ `Comparator.comparingInt(a -> a.value - b.value)` style subtraction **overflows** for extreme ints — use `Integer.compare(a, b)`.
+- ⚠️ `a.value - b.value` style subtraction **overflows** for extreme ints (e.g. `Integer.MIN_VALUE`) → wrong sign → broken sort. Always use `Integer.compare(a, b)`.
+- ⚠️ `compareTo` should be **consistent with `equals`** — `compareTo == 0` ideally means `equals == true`. When it isn't, `TreeSet`/`TreeMap` (which use `compareTo`, not `equals`, for membership — §14.6) behave surprisingly: e.g. a `BigDecimal` `"1.0"` and `"1.00"` are *not* equal but compare *equal*, so a `TreeSet` treats them as one element.
 
 ---
 

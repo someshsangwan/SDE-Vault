@@ -6,17 +6,15 @@
 
 ## Q1: Introduce yourself — MAX 90 seconds
 
-> "Hi, I'm Somesh. I'm a backend engineer at Rakuten Pay, where I've spent two years building payment systems in **Java and Spring Boot**, plus **PHP** for our batch systems — which I noticed is exactly your stack here.
+> "Hi, I'm Somesh. I'm from India — I did my bachelor's there and came straight to Japan for my first job, joining Rakuten as a new grad about 2.5 years ago.
 >
-> My main work is on **Rakuten Cash** — the wallet balance behind Rakuten Pay, the same concept as **PayPay Money**. Users charge that balance through many rails: Rakuten Card with auto-charge, bank accounts, gift cards, and cash. The piece I own is the **cash rail** — the integration that lets users charge at **Seven Bank and Lawson Bank ATMs**. That's the hardest rail to get right, because the ATM has already taken the user's cash, so the credit has to land **exactly once** — so I built idempotency on the banks' transaction IDs, mutual TLS with signed payloads, all inside the banks' two-to-three-second timeout.
+> I work as a **backend developer at Rakuten Cash**, an e-money service where users top up from their bank account or credit card and use that balance to pay. My main work is on the **RCash API — a Java EE service** that handles the core money flows: charging, gifting, and withdrawals.
 >
-> I also built an automated recovery batch in PHP that reconciles stuck transactions with our payment provider — it cut recovery from hours of manual work to under three minutes. And I'm on the on-call rotation, so I've debugged real production incidents down to **root cause** — not just restarting servers.
->
-> Before this, I did Electrical Engineering at IIT Ropar and solved over a thousand algorithm problems — that's what pulled me into fintech.
->
-> So in short: my two years have been about moving money **into** a wallet balance, correctly, at scale. PayPay Securities moves that same balance into investments — and that's exactly why I'm here."
+> On the infra side, we run on **Kubernetes via CaaS**, so I'm comfortable with Docker and I do staging deployments regularly. I've also contributed to our **CI/CD pipelines** — I added a **secrets detector** to stop credential leaks in code, and set up a **rollback plan** so we can recover quickly if a production deploy goes wrong. The codebase spans multiple repos — Java plus PHP batch jobs running on **GCP Cloud Composer**."
 
-**~230 words ≈ 85–90 sec.** If told "briefly": say paragraph 1 + 2 + last line only.
+**Beats:** India → Japan, Rakuten new grad 2.5y → backend @ Rakuten Cash (e-money, top-up → pay) → RCash API (Java EE: charge, gift, withdraw) → K8s/CaaS + Docker, staging deploys → CI/CD: secrets detector + rollback plan → multi-repo (Java, PHP batch on GCP Cloud Composer).
+
+**~160 words ≈ 80–85 sec.** If told "briefly": paragraph 1 + 2 only.
 
 ---
 

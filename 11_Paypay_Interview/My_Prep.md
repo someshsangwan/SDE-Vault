@@ -10,11 +10,11 @@
 >
 > I work as a **backend developer at Rakuten Cash**, an e-money service where users top up from their bank account or credit card and use that balance to pay. My main work is on the **RCash API — a Java EE service** that handles the core money flows: charging, gifting, and withdrawals.
 >
-> On the infra side, we run on **Kubernetes via CaaS**, so I'm comfortable with Docker and I do staging deployments regularly. I've also contributed to our **CI/CD pipelines** — I added a **secrets detector** to stop credential leaks in code, and set up a **rollback plan** so we can recover quickly if a production deploy goes wrong. The codebase spans multiple repos — Java plus PHP batch jobs running on **GCP Cloud Composer**."
+> On the infra side, we run on **Kubernetes via CaaS**, so I'm comfortable with Docker and I do staging deployments regularly. I've also contributed to our **CI/CD pipelines** — I added a **secrets detector** to stop credential leaks in code, and set up a **rollback plan** so we can recover quickly if a production deploy goes wrong. I'm also part of the **on-call rotation** — I handle production incidents through PagerDuty, so I get first-hand experience debugging and stabilizing live money-critical systems under pressure. The codebase spans multiple repos — Java plus PHP batch jobs running on **GCP Cloud Composer**."
 
-**Beats:** India → Japan, Rakuten new grad 2.5y → backend @ Rakuten Cash (e-money, top-up → pay) → RCash API (Java EE: charge, gift, withdraw) → K8s/CaaS + Docker, staging deploys → CI/CD: secrets detector + rollback plan → multi-repo (Java, PHP batch on GCP Cloud Composer).
+**Beats:** India → Japan, Rakuten new grad 2.5y → backend @ Rakuten Cash (e-money, top-up → pay) → RCash API (Java EE: charge, gift, withdraw) → K8s/CaaS + Docker, staging deploys → CI/CD: secrets detector + rollback plan → **on-call/PagerDuty, prod incidents** → multi-repo (Java, PHP batch on GCP Cloud Composer).
 
-**~160 words ≈ 80–85 sec.** If told "briefly": paragraph 1 + 2 only.
+**~185 words ≈ 88–90 sec.** If told "briefly": paragraph 1 + 2 only.
 
 ---
 

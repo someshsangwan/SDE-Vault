@@ -1,35 +1,79 @@
-//https://leetcode.com/problems/palindrome-linked-list/description/
+class Node {
+    int data;
+    Node next;
+    Node(int d) {
+        data = d;
+        next = null;
+    }
+}
 
+// Class to check if the linked list is palindrome or not
+class GfG {
 
-//o(n) space .. put all element in array and then check 2 point if the elemt of array is palindrome .. hahah this is not godd
+    // Function to reverse a linked list
+    static Node reverseList(Node head) {
+        Node prev = null;
+        Node curr = head;
+        Node next;
 
-//find middle of LL
-//then reverse the next part of middle element
-// now compare the first half with seconf half if they are not same them return false else return true
+        while (curr != null) {
+            next = curr.next;
+            curr.next = prev;
+            prev = curr;
+            curr = next;
+        }
+        return prev;
+    }
 
-class Solution {
-    public boolean isPalindrome(ListNode head) {
-        ListNode slow = head, fast = head, prev, temp;
-        while (fast != null && fast.next != null) {
+    // Function to check if two lists are identical
+    static boolean isIdentical(Node n1, Node n2) {
+        while (n1 != null && n2 != null) {
+            if (n1.data != n2.data)
+                return false;
+            n1 = n1.next;
+            n2 = n2.next;
+        }
+        return true;
+    }
+
+    // Function to check whether the list is palindrome
+    static boolean isPalindrome(Node head) {
+        if (head == null || head.next == null)
+            return true;
+
+        Node slow = head, fast = head;
+
+        while (fast.next != null
+                && fast.next.next != null) {
             slow = slow.next;
             fast = fast.next.next;
         }
-        prev = slow;
-        slow = slow.next;
-        prev.next = null;
-        while (slow != null) {
-            temp = slow.next;
-            slow.next = prev;
-            prev = slow;
-            slow = temp;
-        }
-        fast = head;
-        slow = prev;
-        while (slow != null) {
-            if (fast.val != slow.val) return false;
-            fast = fast.next;
-            slow = slow.next;
-        }
-        return true;
+
+        Node head2 = reverseList(slow.next);
+        slow.next = null;
+
+        boolean ret = isIdentical(head, head2);
+
+        head2 = reverseList(head2);
+        slow.next = head2;
+
+        return ret;
+    }
+
+    public static void main(String[] args) {
+
+        // Linked list : 1->2->3->2->1
+        Node head = new Node(1);
+        head.next = new Node(2);
+        head.next.next = new Node(3);
+        head.next.next.next = new Node(2);
+        head.next.next.next.next = new Node(1);
+
+        boolean result = isPalindrome(head);
+
+        if (result)
+            System.out.println("true");
+        else
+            System.out.println("false");
     }
 }

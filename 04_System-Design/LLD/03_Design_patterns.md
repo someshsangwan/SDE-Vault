@@ -161,7 +161,7 @@ enum Config {
 
 ## 5. Factory Method
 
-> **Intent:** Define an interface for creating an object, but let subclasses / a factory decide **which concrete class** to instantiate. Callers depend on the abstraction, not the `new`.
+> **Intent:** Define an interface for creating an object, but let subclasses / a factory decide **which concrete class** to instantiate. Callers depend on the abstraction, not the `new` , in short focus on creating an object for interface rather than implementation.
 
 **Why:** the moment you write `if type == "CREDIT" new CreditCard() else if ...` scattered across your code, you've violated **Open/Closed**. Adding a new payment type means editing every `if`. A factory centralizes creation in one place.
 
@@ -211,53 +211,106 @@ pm.pay(1500);
 
 > **Intent:** Construct a complex object **step by step**, avoiding a giant "telescoping" constructor with many parameters. Especially good when many fields are optional.
 
-**The pain — the telescoping constructor:** `new Transaction(1500, "JPY", true, false, null, true, "REF123", false)` — which boolean is which? Easy to swap args silently.
-
 <details>
-<summary>▸ Java: Transaction.Builder (fluent, immutable, self-validating)</summary>
+<summary>▸ Java: ❌ Without Builder (bad approach)</summary>
 
 ```java
-class Transaction {
-    private final double amount;      // required
-    private final String currency;    // required
-    private final boolean recurring;  // optional
-    private final String reference;   // optional
+class PaymentRequest {
 
-    private Transaction(Builder b) {
-        this.amount = b.amount;
-        this.currency = b.currency;
-        this.recurring = b.recurring;
-        this.reference = b.reference;
+    private String userId;
+    private double amount;
+    private String currency;
+    private String method;
+
+    public PaymentRequest(String userId, double amount, String currency, String method) {
+        this.userId = userId;
+        this.amount = amount;
+        this.currency = currency;
+        this.method = method;
+    }
+}
+
+// 👉 Usage:
+PaymentRequest request = new PaymentRequest(
+        "user1",
+        1000,
+        "JPY",
+        "CARD"
+);
+```
+
+</details>
+
+**❌ Problems with the plain constructor:**
+- Hard to read — at the call site `1000` and `"JPY"` carry no labels.
+- **Parameter order matters** → swap two same-typed args and it compiles but is silently wrong (bug risk).
+- **Optional fields get messy** — you end up passing `null` or writing many overloaded constructors.
+- Too many params → **constructor explosion**.
+
+<details>
+<summary>▸ Java: ✅ With Builder (good approach)</summary>
+
+```java
+class PaymentRequest {
+
+    private String userId;
+    private double amount;
+    private String currency;
+    private String method;
+
+    // private constructor — objects can only be built via the Builder
+    private PaymentRequest(Builder builder) {
+        this.userId = builder.userId;
+        this.amount = builder.amount;
+        this.currency = builder.currency;
+        this.method = builder.method;
     }
 
-    static class Builder {
-        private final double amount;      // required → in Builder constructor
-        private final String currency;
-        private boolean recurring = false; // optional → sensible defaults
-        private String reference;
+    public static class Builder {
 
-        Builder(double amount, String currency) {   // enforce required fields
+        // required fields
+        private String userId;
+        private double amount;
+
+        // optional fields
+        private String currency;
+        private String method;
+
+        public Builder(String userId, double amount) {   // required → Builder constructor
+            this.userId = userId;
             this.amount = amount;
-            this.currency = currency;
         }
-        Builder recurring(boolean r) { this.recurring = r; return this; } // fluent
-        Builder reference(String ref) { this.reference = ref; return this; }
 
-        Transaction build() {
-            if (amount <= 0) throw new IllegalStateException("amount must be > 0");
-            return new Transaction(this);
+        public Builder setCurrency(String currency) {    // optional → fluent setters
+            this.currency = currency;
+            return this;                                 // return `this` to chain calls
+        }
+
+        public Builder setMethod(String method) {
+            this.method = method;
+            return this;
+        }
+
+        public PaymentRequest build() {
+            return new PaymentRequest(this);
         }
     }
 }
 
-// Fluent, order-independent, reads like a sentence:
-Transaction txn = new Transaction.Builder(1500, "JPY")
-        .recurring(true)
-        .reference("REF123")
+// 👉 Usage (clean & safe):
+PaymentRequest request = new PaymentRequest.Builder("user1", 1000)
+        .setCurrency("JPY")
+        .setMethod("CARD")
         .build();
 ```
 
 </details>
+
+**Why the Builder fixes each problem:**
+- **Readable** — every value is labelled at the call site (`.setCurrency("JPY")`).
+- **Order-independent** — chain the optional setters in any order; no positional bugs.
+- **Required vs optional is explicit** — required fields live in the `Builder` constructor, optional ones are fluent setters with defaults.
+- **`build()` is the single choke point** — put validation there (e.g. `if (amount <= 0) throw ...`) so no invalid `PaymentRequest` can ever exist.
 
 **Recognition trigger:** constructor with **4+ params**, or **many optional** params, or you want the result **immutable**. Real Java examples: `StringBuilder`, `Stream.Builder`, Lombok's `@Builder`, `HttpRequest.newBuilder()`.
 

@@ -511,6 +511,16 @@ facade.makePayment("user1", 5000);
 
 **🔥 Key idea:** the client sees **one method** — `facade.makePayment(...)` — while internally multiple subsystems run in the right order. Reduces coupling; the client depends on one clean door instead of five rooms. Almost every service-layer method in Spring Boot is informally a facade.
 
+> [!question] "But the facade still calls all the subsystems manually — isn't that the same problem?"
+> Good catch — and the answer is the whole point. The Facade doesn't make the orchestration *disappear* (the 5 steps are real work; someone must call them). It **relocates** that coupling — from *many clients* down to *one class*.
+>
+> - **Without a facade:** the checkout screen, the billing job, and the refund service each repeat the same 5-step sequence → duplicated logic, and every caller is coupled to all 5 subsystems. Add a step → edit every call site.
+> - **With a facade:** the 5 steps live in `makePayment()` **once**. Every caller just says `facade.makePayment(...)` and imports nothing else. Add a step → edit one method.
+>
+> So the facade is a **trade**: *one* class stays coupled to the subsystems so that *every other* class is coupled only to the facade. Concentrating the mess in one known place — not deleting it — is the goal.
+>
+> 🏨 **Analogy:** a hotel concierge still phones the taxi, restaurant, and theatre. They don't make those calls vanish — they make them *so you don't have to*. Every guest talks to one person; that person talks to the many services.
+
 ---
 
 # BEHAVIORAL PATTERNS

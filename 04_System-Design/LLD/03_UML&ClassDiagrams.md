@@ -65,7 +65,7 @@ classDiagram
     class CreditCard {
         +pay(double amount) void
     }
-    PaymentMethod <|.. CreditCard : implements
+    CreditCard ..|> PaymentMethod : implements
 ```
 
 ---
@@ -91,10 +91,10 @@ classDiagram
     G *-- H : Composition (owns, part-of)
     class I
     class J
-    I <|-- J : Inheritance (is-a)
+    J --|> I : Inheritance (is-a)
     class K
     class L
-    K <|.. L : Realization (implements)
+    L ..|> K : Realization (implements)
 ```
 
 > **Memory hook for the arrowheads:**
@@ -183,7 +183,7 @@ classDiagram
     class SavingsAccount {
         +addInterest() void
     }
-    BankAccount <|-- SavingsAccount : is-a
+    SavingsAccount --|> BankAccount : is-a
 ```
 
 ### 3.6 Realization (Implementation) — `<|..` (dashed line, hollow triangle) — *"implements-a"*
@@ -201,7 +201,7 @@ classDiagram
     class CreditCard {
         +pay(double amount) void
     }
-    PaymentMethod <|.. CreditCard : implements
+    CreditCard ..|> PaymentMethod : implements
 ```
 
 ### Quick-reference table
@@ -212,8 +212,8 @@ classDiagram
 | **Association** | `-->` | solid | *has-a* B as a field, independent lifecycles | `B b;` field |
 | **Aggregation** | `o--` | solid + hollow ◇ | whole/part, part **shared & survives** | `List<B> b;` (shared) |
 | **Composition** | `*--` | solid + filled ◆ | whole/part, part **owned & dies with whole** | `B b = new B();` owned |
-| **Inheritance** | `<\|--` | solid + △ | *is-a* (extends class) | `extends` |
-| **Realization** | `<\|..` | dashed + △ | *implements* interface | `implements` |
+| **Inheritance** | `--\|>` | solid + △ | *is-a* (extends class), triangle points at parent | `extends` |
+| **Realization** | `..\|>` | dashed + △ | *implements* interface, triangle points at interface | `implements` |
 
 ---
 
@@ -276,8 +276,8 @@ classDiagram
     }
     class PaymentGatewayClient
 
-    PaymentMethod <|.. CreditCard : implements
-    PaymentMethod <|.. Wallet : implements
+    CreditCard ..|> PaymentMethod : implements
+    Wallet ..|> PaymentMethod : implements
 
     Customer "1" --> "0..*" Order : places
     Order "1" *-- "1..*" OrderLine : owns

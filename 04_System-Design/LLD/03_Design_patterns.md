@@ -318,13 +318,15 @@ PaymentRequest request = new PaymentRequest.Builder("user1", 1000)
 
 # STRUCTURAL PATTERNS
 
-*"How objects are composed" — assemble objects into bigger structures without brittle inheritance.*
+*"Structural design patterns focus on how classes and objects are composed to build flexible and efficient structures.*
 
 ---
 
 ## 7. Decorator
 
-> **Intent:** Attach new responsibilities to an object **dynamically at runtime** by wrapping it, without changing its class or exploding the class hierarchy.
+> **Intent:** The Decorator pattern adds new functionality to an object **dynamically at runtime** without modifying its class. It works by **wrapping** the original object in a decorator that shares the same interface and extends its behavior. Prefer it over inheritance when you need many **combinations** of features.
+> 👉 Decorator = runtime flexibility
+> 👉 Inheritance = compile-time (rigid)
 
 **The pain:** you have a `PaymentProcessor`. You want to optionally add logging, retry, encryption, fraud-check — in any combination. With inheritance you'd need `LoggingRetryEncryptedProcessor`, `RetryEncryptedProcessor`… a combinatorial explosion. Decorator lets you *stack* behaviors like layers.
 

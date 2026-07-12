@@ -148,6 +148,15 @@ classDiagram
     Team o-- Player : aggregates (shared)
 ```
 
+> **Association vs. Aggregation — the blurriest line in UML:**
+> **Aggregation is a *special kind* of association**, not its opposite — every aggregation is an association, but it adds one claim: **whole–part** ("B is a *part/member of* A").
+> - **Association (`-->`):** the two are **peers** that reference each other; neither is "part of" the other. *Student — Course, Driver — Car, Doctor — Patient.*
+> - **Aggregation (`o--`):** one is the **whole**, the other a **shareable part/member**. *Team ◇— Player, Playlist ◇— Song.*
+>
+> **Test:** *"Is B a part/member of A (container–contents)?"* No → association. Yes, but it survives independently → aggregation.
+>
+> ⚠️ **Honest truth:** this boundary is subjective and **not enforced by any language** — reasonable engineers disagree on `Customer → Address`. The only split that carries real weight is **composition** (lifecycle ownership). So in interviews: **default to plain association (`-->`)**, it's never wrong; use aggregation only to emphasize "member of a collection"; reserve the filled diamond for true ownership. If pushed, say *"aggregation is association with whole–part semantics, but it's non-enforced — the meaningful boundary is composition."*
+
 ### 3.4 Composition — `*--` (filled diamond) — *"owns-a / part-of, strong ownership"*
 The strongest whole–part. The part's **lifecycle is bound to the whole** — destroy the whole and the parts die too. Parts are **not shared**. Diamond sits on the **whole** (owner) side.
 

@@ -531,7 +531,7 @@ facade.makePayment("user1", 5000);
 
 ## 10. Strategy ⭐ (the #1 most-asked LLD pattern)
 
-> **Intent:** Define a family of interchangeable algorithms, encapsulate each one, and make them **swappable at runtime**. The object *delegates* the varying behavior to a strategy object it holds.
+> **Intent:**Strategy lets you choose behavior (algorithm) at runtime instead of using if-else.
 
 **The pain:** giant `if/else` or `switch` selecting behavior. Every new option edits the same method → **Open/Closed violation**.
 

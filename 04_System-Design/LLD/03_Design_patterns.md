@@ -11,13 +11,7 @@ Prerequisites: [[01_OOPS_Basics]] (abstraction, inheritance, polymorphism, inter
 
 ## 1. What *is* a Design Pattern?
 
-A **design pattern is a proven, reusable template for solving a recurring object-oriented design problem.**
-
-Three things to internalize:
-
-1. **It is not code.** It's a *blueprint*. The same pattern looks different in Java vs. C++ vs. a payments service vs. a game engine. You adapt it; you don't copy-paste it.
-2. **It is a shared vocabulary.** When you tell a senior engineer *"the retry logic is a Decorator over the `PaymentProcessor`"*, they instantly understand your entire structure — no explanation needed. This is the real reason FAANG cares: patterns are how engineers communicate design intent compactly.
-3. **It is battle-tested.** Someone already hit this problem, tried the naive solutions, watched them rot, and distilled the version that survives change. Using a pattern means you're standing on that experience.
+A **design patterns are solution of commonly occuring problems in software design. so if we follow those pattern we can write very clean , maintainable and scalable code.**
 
 ### Analogy (payments framing)
 Building software without patterns is like every engineer at Rakuten Pay reinventing "how do we settle a transaction" from scratch. Patterns are the equivalent of the org agreeing: *"settlement always follows this flow."* New engineers read the flow name and immediately know the shape of the code.

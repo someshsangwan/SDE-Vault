@@ -2,6 +2,9 @@
 
 > **The single most important LLD interview topic.** SOLID tells you *what good design looks like*; design patterns are the *named, reusable recipes* that get you there. Interviewers don't ask "define Observer" — they hand you a problem ("design a notification system", "design a payment gateway") and watch **whether the right pattern falls out of your hands naturally.**
 
+> [!tip] Reading this note
+> Every code example is inside a collapsible **▸ toggle** — click to expand. Read the prose top-to-bottom first; open the code when you want the concrete Java.
+
 Prerequisites: [[01_OOPS_Basics]] (abstraction, inheritance, polymorphism, interfaces) and [[02_SOLID_Principles]] (every pattern is SOLID applied).
 
 ---
@@ -97,6 +100,9 @@ graph TD
 ### The interview trap
 Singleton is where interviewers test **concurrency knowledge**. The naive version is broken under multithreading.
 
+<details>
+<summary>▸ Java: the BROKEN naive version + 3 correct options</summary>
+
 ```java
 // ❌ BROKEN under concurrency: two threads can both pass the null check
 class Config {
@@ -110,8 +116,6 @@ class Config {
     }
 }
 ```
-
-**The correct, idiomatic Java options (know at least two):**
 
 ```java
 // ✅ Option 1: Double-Checked Locking (the classic interview answer)
@@ -130,8 +134,6 @@ class Config {
     }
 }
 ```
-
-Why `volatile`? Without it, another thread can see a *partially constructed* object due to instruction reordering (the reference is assigned before the constructor finishes). `volatile` forbids that reordering. **This one detail separates SDE2 from junior answers.**
 
 ```java
 // ✅ Option 2: Bill Pugh / Initialization-on-Demand Holder — cleaner, no locks
@@ -155,6 +157,10 @@ enum Config {
 }
 ```
 
+</details>
+
+**Why `volatile`?** Without it, another thread can see a *partially constructed* object due to instruction reordering (the reference is assigned before the constructor finishes). `volatile` forbids that reordering. **This one detail separates SDE2 from junior answers.**
+
 **Pitfalls / criticism:** Singletons are global state → they make unit testing hard (can't easily mock/reset) and hide dependencies. Many consider it an *anti-pattern* when overused. In a Spring app, prefer letting the **DI container** manage the single instance rather than hand-rolling `getInstance()`.
 
 ---
@@ -164,6 +170,9 @@ enum Config {
 > **Intent:** Define an interface for creating an object, but let subclasses / a factory decide **which concrete class** to instantiate. Callers depend on the abstraction, not the `new`.
 
 **Why:** the moment you write `if type == "CREDIT" new CreditCard() else if ...` scattered across your code, you've violated **Open/Closed**. Adding a new payment type means editing every `if`. A factory centralizes creation in one place.
+
+<details>
+<summary>▸ Java: PaymentFactory (payments example)</summary>
 
 ```java
 interface PaymentMethod {
@@ -196,6 +205,8 @@ PaymentMethod pm = PaymentFactory.create("RAKUTEN");
 pm.pay(1500);
 ```
 
+</details>
+
 **Recognition trigger:** *"the client shouldn't know which concrete class it gets"* or *"we keep adding new subtypes."*
 
 > **Factory Method vs. Abstract Factory:** Factory Method creates **one** product. **Abstract Factory** creates **families** of related products (e.g. a `UITheme` factory producing a matching `Button` + `Checkbox` + `Scrollbar` for Dark vs. Light theme). Abstract Factory = "a factory of factories." Know the distinction; you rarely need Abstract Factory in interviews but naming it scores points.
@@ -206,15 +217,12 @@ pm.pay(1500);
 
 > **Intent:** Construct a complex object **step by step**, avoiding a giant "telescoping" constructor with many parameters. Especially good when many fields are optional.
 
-**The pain it solves — the telescoping constructor:**
+**The pain — the telescoping constructor:** `new Transaction(1500, "JPY", true, false, null, true, "REF123", false)` — which boolean is which? Easy to swap args silently.
+
+<details>
+<summary>▸ Java: Transaction.Builder (fluent, immutable, self-validating)</summary>
 
 ```java
-// ❌ Which boolean is which? Easy to swap args silently. Nightmare to read.
-new Transaction(1500, "JPY", true, false, null, true, "REF123", false);
-```
-
-```java
-// ✅ Builder — readable, immutable, self-validating
 class Transaction {
     private final double amount;      // required
     private final String currency;    // required
@@ -255,6 +263,8 @@ Transaction txn = new Transaction.Builder(1500, "JPY")
         .build();
 ```
 
+</details>
+
 **Recognition trigger:** constructor with **4+ params**, or **many optional** params, or you want the result **immutable**. Real Java examples: `StringBuilder`, `Stream.Builder`, Lombok's `@Builder`, `HttpRequest.newBuilder()`.
 
 ---
@@ -270,6 +280,9 @@ Transaction txn = new Transaction.Builder(1500, "JPY")
 > **Intent:** Attach new responsibilities to an object **dynamically at runtime** by wrapping it, without changing its class or exploding the class hierarchy.
 
 **The pain:** you have a `PaymentProcessor`. You want to optionally add logging, retry, encryption, fraud-check — in any combination. With inheritance you'd need `LoggingRetryEncryptedProcessor`, `RetryEncryptedProcessor`… a combinatorial explosion. Decorator lets you *stack* behaviors like layers.
+
+<details>
+<summary>▸ Java: stackable PaymentProcessor decorators</summary>
 
 ```java
 interface PaymentProcessor {
@@ -308,6 +321,8 @@ PaymentProcessor p = new LoggingProcessor(new RetryProcessor(new BasicProcessor(
 p.process(1500);
 ```
 
+</details>
+
 **Recognition trigger:** *"add features in combinations,"* *"optional add-on behavior,"* *"wrap without modifying."* The canonical real example is **`java.io`**: `new BufferedReader(new InputStreamReader(new FileInputStream(f)))` — each wraps and adds behavior.
 
 > **Decorator vs. Inheritance:** inheritance is *static* (fixed at compile time); decorator is *dynamic* (composed at runtime). This is "favor composition over inheritance" made concrete.
@@ -319,6 +334,9 @@ p.process(1500);
 > **Intent:** Convert the interface of one class into another interface the client expects. Makes two **incompatible** interfaces work together — a translator/plug-converter.
 
 **The pain (extremely common in payments):** your code calls a clean internal `PaymentGateway` interface, but you integrate a **third-party SDK** (Stripe, PayPal) whose method names/signatures are totally different and you can't edit their code. Wrap it in an adapter.
+
+<details>
+<summary>▸ Java: StripeAdapter (wrap a 3rd-party SDK)</summary>
 
 ```java
 // What OUR code expects
@@ -347,6 +365,8 @@ PaymentGateway gw = new StripeAdapter();
 gw.pay(1500);
 ```
 
+</details>
+
 **Recognition trigger:** *"integrate a library/legacy/3rd-party class whose interface doesn't match ours."* Real Java: `Arrays.asList()`, `Collections`, `InputStreamReader` (adapts a byte stream to a char stream).
 
 > **Adapter vs. Decorator:** both wrap. **Adapter changes the interface** (makes incompatible things fit). **Decorator keeps the same interface** but adds behavior. Different intent, similar shape — interviewers love this distinction.
@@ -372,6 +392,9 @@ Your `checkout()` method hides a mess of `InventoryService`, `PaymentService`, `
 > **Intent:** Define a family of interchangeable algorithms, encapsulate each one, and make them **swappable at runtime**. The object *delegates* the varying behavior to a strategy object it holds.
 
 **The pain:** giant `if/else` or `switch` selecting behavior. Every new option edits the same method → **Open/Closed violation**.
+
+<details>
+<summary>▸ Java: FeeStrategy (kill the switch on payment type)</summary>
 
 ```java
 // ❌ Anti-pattern: behavior baked into conditionals
@@ -413,6 +436,8 @@ c.setStrategy(new RakutenPayFee());   // switch on the fly
 c.checkout(1000);                     // 1000
 ```
 
+</details>
+
 **Recognition trigger:** *"multiple ways to do the same thing,"* *"algorithm chosen at runtime,"* *"replace a switch on 'type'."* Real Java: `Comparator` passed to `Collections.sort()` **is Strategy** — you inject the comparison algorithm.
 
 > Strategy is composition's poster child. If you can only master one pattern for interviews, make it this one — payment fees, discounts, sorting, routing, pricing all map to it.
@@ -425,6 +450,9 @@ c.checkout(1000);                     // 1000
 
 **The pain:** a payment succeeds and you must trigger email + SMS + loyalty points + analytics. Hardcoding all of these into the payment class couples it to everything and violates Open/Closed (new listener = edit payment code).
 
+<details>
+<summary>▸ Java: PaymentService subject + notifier observers</summary>
+
 ```java
 interface Observer {
     void update(String event);
@@ -433,15 +461,15 @@ class Subject {
     private final List<Observer> observers = new ArrayList<>();
     public void subscribe(Observer o)   { observers.add(o); }
     public void unsubscribe(Observer o) { observers.remove(o); }
-    protected void notifyAll(String event) {
-        for (Observer o : observers) o.update(event);   // broadcast
+    protected void broadcast(String event) {
+        for (Observer o : observers) o.update(event);   // notify all
     }
 }
 
 class PaymentService extends Subject {
     public void completePayment(double amt) {
         System.out.println("Payment of " + amt + " done");
-        notifyAll("PAYMENT_SUCCESS");        // subject doesn't know WHO listens
+        broadcast("PAYMENT_SUCCESS");        // subject doesn't know WHO listens
     }
 }
 
@@ -456,6 +484,8 @@ ps.subscribe(new LoyaltyService());     // add listeners without touching Paymen
 ps.completePayment(1500);               // all three fire automatically
 ```
 
+</details>
+
 **Recognition trigger:** *"when X happens, notify/update many others,"* *"event system,"* *"pub-sub,"* *"listeners."* Real world: Kafka consumers, Spring `ApplicationEvent`/`@EventListener`, UI button click listeners, React state → re-render.
 
 ---
@@ -465,6 +495,9 @@ ps.completePayment(1500);               // all three fire automatically
 > **Intent:** Let an object **change its behavior when its internal state changes** — it appears to change its class. Replaces sprawling state-machine `if/else`.
 
 **Perfect fit for payments:** an `Order` or `Transaction` moves through `PENDING → AUTHORIZED → CAPTURED → REFUNDED`, and what each action *does* depends on the current state (you can't `refund()` a `PENDING` txn). Instead of checking `if (state == ...)` everywhere, each state is a class that knows its own valid transitions.
+
+<details>
+<summary>▸ Java: TransactionState machine</summary>
 
 ```java
 interface TransactionState {
@@ -490,6 +523,8 @@ class RefundedState implements TransactionState {
     public void refund(TransactionContext c) { System.out.println("Already refunded"); }
 }
 ```
+
+</details>
 
 **Recognition trigger:** *"object behaves differently based on its status,"* *"state machine,"* *"lifecycle with transitions."*
 
